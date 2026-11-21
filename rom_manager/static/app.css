@@ -14,11 +14,23 @@
   max-height: 60vh;
 }
 
+:root {
+  --navbar-height: 3.5rem;
+}
+
 @media (min-width: 768px) {
-  .sidebar {
+  .app-navbar {
     position: sticky;
     top: 0;
-    max-height: 100vh;
+    z-index: 1020;
+    height: var(--navbar-height);
+  }
+
+  .sidebar {
+    position: sticky;
+    top: var(--navbar-height);
+    height: calc(100vh - var(--navbar-height));
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 }
