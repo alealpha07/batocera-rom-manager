@@ -43,6 +43,12 @@ def start_session(response, secret):
                         httponly=True, samesite="Strict")
 
 
+def redirect_with_session(config):
+    response = web.HTTPFound("/")
+    start_session(response, config["secret"])
+    raise response
+
+
 def end_session(response):
     response.del_cookie(COOKIE_NAME)
 

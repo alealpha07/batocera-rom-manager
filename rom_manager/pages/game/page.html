@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 {% set media_url = "/media/" ~ (game.group | urlencode) ~ "/" ~ (game.id | urlencode) ~ "/" %}
 {% block title %}{{ game.name }} - Batocera Rom Manager{% endblock %}
 {% block body %}
 <div class="container-fluid">
   <div class="row">
-    {% include "_sidebar.html" %}
+    {% include "sidebar.html" %}
     <main class="col-md-9 col-xl-10 py-3">
       <button class="btn btn-outline-secondary btn-sm d-md-none mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">Systems</button>
       {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}

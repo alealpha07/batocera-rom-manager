@@ -12,9 +12,12 @@
     <div class="container-fluid">
       <a class="navbar-brand" href="/">Batocera Rom Manager</a>
       {% if logged_in %}
-      <form method="post" action="/logout">
-        <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
-      </form>
+      <div class="d-flex gap-2">
+        <a class="btn btn-primary btn-sm" href="/add">Add ROMs</a>
+        <form method="post" action="/logout">
+          <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
+        </form>
+      </div>
       {% endif %}
     </div>
   </nav>

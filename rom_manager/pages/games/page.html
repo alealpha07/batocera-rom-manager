@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 {% macro sort_link(column, label) %}
 {%- set next_sort = "-" ~ column if sort == column else column -%}
 <a class="link-body-emphasis text-decoration-none" href="?{{ dict(params, sort=next_sort) | urlencode }}">{{ label }}{% if sort == column %} ▲{% elif sort == "-" ~ column %} ▼{% endif %}</a>
@@ -6,7 +6,7 @@
 {% block body %}
 <div class="container-fluid">
   <div class="row">
-    {% include "_sidebar.html" %}
+    {% include "sidebar.html" %}
     <main class="col-md-9 col-xl-10 py-3">
       <button class="btn btn-outline-secondary btn-sm d-md-none mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">Systems</button>
       {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
@@ -22,6 +22,7 @@
           </div>
         </form>
         <span class="text-body-secondary small">{{ games | length }} games, {{ total_size | size }}</span>
+        {% if current %}<a class="btn btn-outline-primary btn-sm" href="/add?system={{ current | urlencode }}">Add here</a>{% endif %}
         <form method="post" action="/refresh">
           <input type="hidden" name="next" value="{{ path }}">
           <button class="btn btn-outline-secondary btn-sm" type="submit">Refresh</button>

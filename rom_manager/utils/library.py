@@ -5,11 +5,10 @@ from collections import Counter
 
 import aiohttp
 
-from . import es
-from .config import ROMS_DIR
-from .systems import all_systems
+from .es import all_systems
+from .roms import display_path, file_size, game_files
 
-MULTI_FILE = (".cue", ".gdi", ".m3u", ".ccd")
+ES_RESCAN_SETTLE_SECONDS = 1
 MEDIA_KINDS = ("thumbnail", "image", "titleshot", "marquee", "wheel", "video")
 MAX_LISTED_FILES = 200
 SORT_KEYS = {
@@ -27,18 +26,26 @@ class Library:
         self.error = None
         self.lock = asyncio.Lock()
 
-    async def ensure_loaded(self, session):
+    async def ensure_loaded(self, es):
         async with self.lock:
             if not self.loaded:
-                await self.load(session)
+                await self.load(es)
 
-    async def refresh(self, session):
+    async def refresh(self, es):
         async with self.lock:
-            await self.load(session)
+            await self.load(es)
 
-    async def load(self, session):
+    async def rescan(self, es):
         try:
-            listed = await fetch_games(session)
+            await es.reload_games()
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            pass
+        await asyncio.sleep(ES_RESCAN_SETTLE_SECONDS)
+        await self.refresh(es)
+
+    async def load(self, es):
+        try:
+            listed = await fetch_games(es)
         except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
             self.error = "EmulationStation isn't answering, so the game list may be out of date."
             return
@@ -69,14 +76,14 @@ class Library:
         return sum(1 for g in self.games if hidden or not g["hidden"])
 
 
-async def fetch_games(session):
-    systems = [s for s in await es.systems(session)
+async def fetch_games(es):
+    systems = [s for s in await es.systems()
                if s.get("collection") != "true" and int(s.get("totalGames") or 0)]
     # grouped systems (prboom inside ports...) are listed by their visible parent too: the parent wins
     systems.sort(key=lambda s: s.get("visible") != "true")
     games, seen = [], set()
     for system in systems:
-        for game in await es.games(session, system["name"]):
+        for game in await es.games(system["name"]):
             path = game.get("path", "")
             if path and path not in seen:
                 seen.add(path)
@@ -158,65 +165,3 @@ def file_list(game):
     files = game_files(game["path"])
     listed = [(display_path(f, game["system"]), file_size(f)) for f in files[:MAX_LISTED_FILES]]
     return listed, len(files) - len(listed)
-
-
-def display_path(path, system):
-    for folder in (all_systems().get(system, {}).get("path"), ROMS_DIR):
-        if folder and path.startswith(folder.rstrip("/") + "/"):
-            return os.path.relpath(path, folder)
-    return path
-
-
-def referenced_files(path):
-    folder, lower = os.path.dirname(path), path.lower()
-    try:
-        with open(path, errors="ignore") as fh:
-            lines = [line.strip() for line in fh]
-    except OSError:
-        lines = []
-    targets = []
-    for line in lines:
-        if lower.endswith(".m3u"):
-            if line and not line.startswith("#"):
-                targets.append(line)
-        elif lower.endswith(".cue"):
-            file_line = re.match(r'FILE\s+"?(.+?)"?\s+\S+$', line, re.I)
-            if file_line:
-                targets.append(file_line.group(1))
-        elif lower.endswith(".gdi"):
-            parts = re.findall(r'"[^"]+"|\S+', line)
-            if len(parts) >= 5:
-                targets.append(parts[4].strip('"'))
-    if lower.endswith(".ccd"):
-        base = os.path.splitext(os.path.basename(path))[0]
-        targets += [base + ".img", base + ".sub"]
-    return [os.path.normpath(os.path.join(folder, target)) for target in targets]
-
-
-def game_files(path):
-    if os.path.isdir(path):
-        return [os.path.join(folder, name) for folder, _, names in os.walk(path) for name in names]
-    files, pending = [os.path.normpath(path)], [path]
-    while pending:
-        current = pending.pop()
-        if current.lower().endswith(MULTI_FILE):
-            for ref in referenced_files(current):
-                if ref not in files:
-                    files.append(ref)
-                    pending.append(ref)
-    return files
-
-
-def file_size(path):
-    try:
-        return os.path.getsize(path)
-    except OSError:
-        return 0
-
-
-def human_size(size):
-    for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024:
-            return "%d %s" % (size, unit) if unit == "B" else "%.1f %s" % (size, unit)
-        size /= 1024
-    return "%.1f TB" % size
