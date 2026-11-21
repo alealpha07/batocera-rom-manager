@@ -1,0 +1,24 @@
+.auth-form {
+  max-width: 420px;
+}
+
+.search-box {
+  width: 16rem;
+}
+
+.game-description {
+  white-space: pre-line;
+}
+
+.game-video {
+  max-height: 60vh;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}

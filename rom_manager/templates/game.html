@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% set media_url = "/media/" ~ (game.group | urlencode) ~ "/" ~ (game.id | urlencode) ~ "/" %}
+{% block title %}{{ game.name }} - Batocera Rom Manager{% endblock %}
+{% block body %}
+<div class="container-fluid">
+  <div class="row">
+    {% include "_sidebar.html" %}
+    <main class="col-md-9 col-xl-10 py-3">
+      <button class="btn btn-outline-secondary btn-sm d-md-none mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">Systems</button>
+      {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/games">All games</a></li>
+          <li class="breadcrumb-item"><a href="/games?system={{ game.group | urlencode }}">{{ game.group_fullname }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{{ game.name }}</li>
+        </ol>
+      </nav>
+      <h1 class="h3 mb-1">
+        {{ game.name }}
+        {% if game.es.favorite == "true" %}<span class="badge text-bg-warning align-middle fs-6">favorite</span>{% endif %}
+        {% if game.hidden %}<span class="badge text-bg-secondary align-middle fs-6">hidden</span>{% endif %}
+      </h1>
+      <p class="text-body-secondary">{{ game.fullname }}</p>
+      <div class="row g-4">
+        {% if media | reject("equalto", "video") | list %}
+        <div class="col-lg-4">
+          {% for kind in media if kind != "video" %}
+          <img class="img-fluid rounded mb-3 d-block" src="{{ media_url }}{{ kind }}" alt="{{ game.name }} {{ kind }}" loading="lazy">
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="col-lg">
+          {% if game.es.desc %}<p class="game-description">{{ game.es.desc }}</p>{% endif %}
+          {% if "video" in media %}
+          <video class="w-100 rounded mb-3 game-video" controls preload="metadata" src="{{ media_url }}video"></video>
+          {% endif %}
+          {% if details %}
+          <dl class="row">
+            {% for label, value in details %}
+            <dt class="col-sm-4 col-xl-3">{{ label }}</dt>
+            <dd class="col-sm-8 col-xl-9">{{ value }}</dd>
+            {% endfor %}
+          </dl>
+          {% endif %}
+          <h2 class="h5 mt-4">Files</h2>
+          <table class="table table-sm align-middle">
+            <tbody>
+              {% for path, size in files %}
+              <tr>
+                <td class="text-break">{{ path }}</td>
+                <td class="text-end text-nowrap">{{ size | size }}</td>
+              </tr>
+              {% endfor %}
+              {% if more_files %}
+              <tr><td colspan="2" class="text-body-secondary">and {{ more_files }} more files</td></tr>
+              {% endif %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th class="text-end text-nowrap">{{ game.size | size }}</th>
+              </tr>
+            </tfoot>
+          </table>
+          <p class="small text-body-secondary text-break">{{ game.path }}</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+{% endblock %}

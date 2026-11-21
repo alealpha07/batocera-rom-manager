@@ -1,0 +1,59 @@
+#!/bin/bash
+
+SERVICE_NAME="rom_manager"
+INSTALL_DIR="/userdata/system/rom-manager"
+PID_FILE="/var/run/rom-manager.pid"
+LOG_FILE="/userdata/system/logs/rom-manager.log"
+
+log() { echo "$(date '+%F %T') | $*" >>"$LOG_FILE"; }
+
+is_running() {
+    [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null
+}
+
+start_service() {
+    if is_running; then
+        return 0
+    fi
+    mkdir -p "$(dirname "$LOG_FILE")"
+    cd "$INSTALL_DIR" || return 1
+    nohup python3 -u -m rom_manager >>"$LOG_FILE" 2>&1 &
+    echo $! >"$PID_FILE"
+    log "started"
+}
+
+stop_service() {
+    if ! is_running; then
+        rm -f "$PID_FILE"
+        return 0
+    fi
+    local pid
+    pid="$(cat "$PID_FILE")"
+    kill "$pid"
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        kill -0 "$pid" 2>/dev/null || break
+        sleep 0.5
+    done
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$PID_FILE"
+    log "stopped"
+}
+
+status_service() {
+    if is_running; then
+        echo "${SERVICE_NAME}: running"
+    else
+        echo "${SERVICE_NAME}: stopped"
+    fi
+}
+
+case "${1-}" in
+    start) start_service ;;
+    stop) stop_service ;;
+    restart) stop_service; start_service ;;
+    status) status_service ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
