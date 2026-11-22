@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import os
 import re
 from collections import Counter
@@ -8,7 +9,8 @@ import aiohttp
 from .es import all_systems
 from .roms import display_path, file_size, game_files
 
-ES_RESCAN_SETTLE_SECONDS = 1
+INFO_TEXT_FIELDS = ("name", "desc", "genre", "developer", "publisher", "players", "region")
+INFO_FLAGS = ("favorite", "hidden")
 MEDIA_KINDS = ("thumbnail", "image", "titleshot", "marquee", "wheel", "video")
 MAX_LISTED_FILES = 200
 SORT_KEYS = {
@@ -36,11 +38,7 @@ class Library:
             await self.load(es)
 
     async def rescan(self, es):
-        try:
-            await es.reload_games()
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            pass
-        await asyncio.sleep(ES_RESCAN_SETTLE_SECONDS)
+        await es.reload_and_wait()
         await self.refresh(es)
 
     async def load(self, es):
@@ -157,11 +155,51 @@ def game_details(game):
     return [(label, value) for label, value in details if value]
 
 
+def info_form(meta):
+    rating = to_float(meta.get("rating"))
+    form = {key: meta.get(key) or "" for key in INFO_TEXT_FIELDS}
+    form.update({key: meta.get(key) == "true" for key in INFO_FLAGS})
+    form["releasedate"] = es_date(meta.get("releasedate"))
+    form["rating"] = "%g" % round(rating * 5, 1) if rating else ""
+    return form
+
+
+def es_value(key, value):
+    if key == "name" and not value:
+        raise ValueError("The name can't be empty")
+    if key == "releasedate" and value:
+        try:
+            return datetime.date.fromisoformat(value).strftime("%Y%m%dT000000")
+        except ValueError:
+            raise ValueError("Invalid release date: %s" % value)
+    if key == "rating":
+        try:
+            stars = float(value or 0)
+        except ValueError:
+            stars = -1
+        if not 0 <= stars <= 5:
+            raise ValueError("The rating goes from 0 to 5")
+        return "%g" % round(stars / 5, 4)
+    return value
+
+
+def info_changes(meta, form):
+    current, changes = info_form(meta), {}
+    for key in INFO_FLAGS:
+        if (form.get(key) == "1") != current[key]:
+            changes[key] = "true" if form.get(key) == "1" else "false"
+    for key in INFO_TEXT_FIELDS + ("releasedate", "rating"):
+        value = form.get(key, "").replace("\r\n", "\n").strip()
+        if value != current[key].strip():
+            changes[key] = es_value(key, value)
+    return changes
+
+
 def game_media(game):
     return [kind for kind in MEDIA_KINDS if (game["es"].get(kind) or "").startswith("/systems/")]
 
 
-def file_list(game):
-    files = game_files(game["path"])
+def file_list(game, files=None):
+    files = game_files(game["path"]) if files is None else files
     listed = [(display_path(f, game["system"]), file_size(f)) for f in files[:MAX_LISTED_FILES]]
     return listed, len(files) - len(listed)

@@ -1,13 +1,17 @@
+import contextlib
 import os
 import re
 import shutil
 
 from ..config import ROMS_DIR
+from . import gamelist
 from .es import all_systems
 
 CHUNK_SIZE = 1 << 20
 PART_SUFFIX = ".part"
 MULTI_FILE = (".cue", ".gdi", ".m3u", ".ccd")
+IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif"}
+VIDEO_TYPES = {".mp4": "video/mp4", ".webm": "video/webm", ".avi": "video/avi"}
 
 
 class RomError(Exception):
@@ -115,6 +119,77 @@ def game_files(path):
                     files.append(ref)
                     pending.append(ref)
     return files
+
+
+def system_folder(game):
+    return all_systems().get(game["system"], {}).get("path") or os.path.dirname(game["path"])
+
+
+def is_inside(path, folder):
+    return os.path.abspath(path).startswith(os.path.abspath(folder).rstrip("/") + "/")
+
+
+def managed_path(game):
+    path = os.path.normpath(game["path"])
+    if not is_inside(path, ROMS_DIR) or path in {os.path.normpath(s["path"]) for s in all_systems().values()}:
+        raise RomError("%s is outside the ROM folders" % path)
+    return path
+
+
+def remove_empty_parent(path, folder):
+    parent = os.path.dirname(path)
+    if is_inside(parent, folder) and not os.listdir(parent):
+        os.rmdir(parent)
+
+
+def delete_plan(game):
+    path = managed_path(game)
+    files = [f for f in game_files(path) if os.path.lexists(f)]
+    files += [f for f in gamelist.media_files(system_folder(game), path) if f not in files]
+    return [f for f in files if is_inside(f, ROMS_DIR)]
+
+
+def delete_game(game, plan):
+    path, folder = managed_path(game), system_folder(game)
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    for file in plan:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(file)
+    gamelist.remove_entry(folder, path)
+    remove_empty_parent(path, folder)
+
+
+def media_content_type(kind, filename):
+    types = VIDEO_TYPES if kind == "video" else IMAGE_TYPES
+    content_type = types.get(os.path.splitext(filename or "")[1].lower())
+    if not content_type:
+        raise RomError("Allowed files: %s" % ", ".join(sorted({ext.lstrip(".") for ext in types})))
+    return content_type
+
+
+def game_media_files(game):
+    return gamelist.entry_media(system_folder(game), managed_path(game))
+
+
+def delete_unused_media(game, file):
+    if file and os.path.isfile(file) and is_inside(file, ROMS_DIR) \
+            and file not in gamelist.all_entry_files(system_folder(game)):
+        os.remove(file)
+
+
+def remove_game_media(game, kind):
+    file = game_media_files(game).get(kind)
+    gamelist.remove_media_tag(system_folder(game), managed_path(game), kind)
+    delete_unused_media(game, file)
+
+
+def media_versions(game):
+    try:
+        files = game_media_files(game)
+    except (OSError, RomError):
+        return {}
+    return {kind: int(os.path.getmtime(file)) for kind, file in files.items() if os.path.isfile(file)}
 
 
 def file_size(path):

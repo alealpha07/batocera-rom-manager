@@ -1,0 +1,61 @@
+{% macro transfer(base, place_label, done_link, done_text, subfolder_label, subfolder_placeholder) %}
+<div id="transfer" data-base="{{ base }}" data-done-link="{{ done_link }}" data-done-text="{{ done_text }}">
+  <div class="row g-3 mb-4">
+    {{ caller() }}
+    <div class="col-md-4">
+      <label class="form-label" for="subfolder">{{ subfolder_label }} <span class="text-body-secondary">(optional)</span></label>
+      <input class="form-control" type="text" id="subfolder" maxlength="200" placeholder="{{ subfolder_placeholder }}">
+    </div>
+    <div class="col-md-3 d-flex align-items-md-end">
+      <div class="form-check mb-md-2">
+        <input class="form-check-input" type="checkbox" id="overwrite">
+        <label class="form-check-label" for="overwrite">Overwrite existing files</label>
+      </div>
+    </div>
+  </div>
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab" aria-controls="upload-pane" aria-selected="true">Upload</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="link-tab" data-bs-toggle="tab" data-bs-target="#link-pane" type="button" role="tab" aria-controls="link-pane" aria-selected="false">From link</button>
+    </li>
+  </ul>
+  <div class="tab-content border border-top-0 rounded-bottom p-3">
+    <div class="tab-pane fade show active" id="upload-pane" role="tabpanel" aria-labelledby="upload-tab" tabindex="0">
+      <form id="upload-form">
+        <label class="form-label" for="files">Files</label>
+        <input class="form-control mb-3" type="file" id="files" multiple required>
+        <button class="btn btn-primary" type="submit" id="upload-button">Upload</button>
+        <div class="progress mt-3 d-none" id="upload-progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar"></div>
+        </div>
+        <div class="small text-body-secondary mt-2" id="upload-status"></div>
+        <ul class="list-group mt-3" id="upload-results"></ul>
+      </form>
+    </div>
+    <div class="tab-pane fade" id="link-pane" role="tabpanel" aria-labelledby="link-tab" tabindex="0">
+      <form id="link-form">
+        <label class="form-label" for="urls">Links, one per line</label>
+        <textarea class="form-control font-monospace mb-3" id="urls" rows="4" required placeholder="https://example.com/file.zip"></textarea>
+        <label class="form-label" for="name">File name <span class="text-body-secondary">(optional, single link only)</span></label>
+        <input class="form-control mb-3" type="text" id="name" maxlength="200">
+        <button class="btn btn-primary" type="submit" id="link-button">Start download</button>
+        <div class="alert alert-danger mt-3 mb-0 d-none" id="link-error"></div>
+      </form>
+    </div>
+  </div>
+  <h2 class="h6 mt-4">Downloads</h2>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr><th>File</th><th>{{ place_label }}</th><th class="w-25">Progress</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody id="jobs">
+        <tr><td colspan="5" class="text-center text-body-secondary py-3">No downloads</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<script>{% include "transfer.js" %}</script>
+{% endmacro %}

@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+{% from "transfer.html" import transfer %}
+{% block title %}BIOS - Batocera Rom Manager{% endblock %}
+{% block body %}
+<main class="container py-3">
+  <h1 class="h4 mb-3">BIOS</h1>
+  {% include "flash.html" %}
+  <section class="mb-5">
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+      <h2 class="h5 mb-0 me-auto">Missing BIOS</h2>
+      <form method="get" action="/bios">
+        {% if relative %}<input type="hidden" name="path" value="{{ relative }}">{% endif %}
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" role="switch" id="show-all" name="all" value="1"{% if show_all %} checked{% endif %} onchange="this.form.submit()">
+          <label class="form-check-label" for="show-all">All systems</label>
+        </div>
+      </form>
+    </div>
+    <p class="small text-body-secondary">From Batocera's own BIOS check{% if not show_all %}, for systems that have games{% endif %}. Some systems list several alternatives where one is enough.</p>
+    {% if report_error %}<div class="alert alert-warning">{{ report_error }}</div>{% endif %}
+    {% for system in problems %}
+    {% set system_index = loop.index %}
+    <div class="card mb-3">
+      <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-semibold me-auto">{{ system.fullname }}</span>
+        <span class="badge text-bg-danger">{{ system.problems }} of {{ system.files | length }} missing or wrong</span>
+      </div>
+      <ul class="list-group list-group-flush">
+        {% for file in system.files if file.status != "ok" %}
+        <li class="list-group-item">
+          <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-break me-auto">{{ file.file }}</span>
+            <span class="badge {{ 'text-bg-warning' if file.status == 'wrong md5' else 'text-bg-secondary' }}">{{ file.status }}</span>
+            {% if file.uploadable %}
+            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#fix-{{ system_index }}-{{ loop.index }}" aria-expanded="false" aria-controls="fix-{{ system_index }}-{{ loop.index }}">Add file</button>
+            {% endif %}
+          </div>
+          {% if file.md5 %}<div class="small text-body-secondary font-monospace text-break">md5 {{ file.md5 }}</div>{% endif %}
+          {% if file.uploadable %}
+          <div class="collapse" id="fix-{{ system_index }}-{{ loop.index }}">
+            <div class="row g-2 pt-2">
+              <form class="col-lg-6 d-flex gap-2" method="post" enctype="multipart/form-data" action="/bios/entry/upload" onsubmit="this.querySelector('[type=submit]').disabled = true">
+                <input type="hidden" name="next" value="{{ here }}">
+                <input type="hidden" name="system" value="{{ system.name }}">
+                <input type="hidden" name="file" value="{{ file.file }}">
+                <input class="form-control form-control-sm" type="file" name="upload" required aria-label="File for {{ file.file }}">
+                <button class="btn btn-primary btn-sm" type="submit">Upload</button>
+              </form>
+              <form class="col-lg-6 d-flex gap-2" method="post" action="/bios/entry/link">
+                <input type="hidden" name="next" value="{{ here }}">
+                <input type="hidden" name="system" value="{{ system.name }}">
+                <input type="hidden" name="file" value="{{ file.file }}">
+                <input class="form-control form-control-sm" type="url" name="url" required placeholder="https://…" aria-label="Link for {{ file.file }}">
+                <button class="btn btn-primary btn-sm" type="submit">Download</button>
+              </form>
+            </div>
+            <div class="form-text">Saved as {{ file.file }} whatever the uploaded file is called, then checked again.</div>
+          </div>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    {% if not report_error %}<p class="text-body-secondary">Nothing missing.</p>{% endif %}
+    {% endfor %}
+    {% if complete %}<p class="small text-body-secondary">Complete: {{ complete | map(attribute="fullname") | join(", ") }}</p>{% endif %}
+  </section>
+  <section>
+    <h2 class="h5">Files</h2>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/bios">bios</a></li>
+        {% for label, path in crumbs %}
+        <li class="breadcrumb-item{% if loop.last %} active{% endif %}"{% if loop.last %} aria-current="page"{% endif %}>
+          {% if loop.last %}{{ label }}{% else %}<a href="/bios?path={{ path | urlencode }}">{{ label }}</a>{% endif %}
+        </li>
+        {% endfor %}
+      </ol>
+    </nav>
+    {% if listing_error %}<div class="alert alert-warning">{{ listing_error }}</div>{% endif %}
+    <div class="table-responsive mb-4">
+      <table class="table table-sm table-hover align-middle">
+        <tbody>
+          {% for name in folders %}
+          <tr>
+            <td><a href="/bios?path={{ (relative ~ '/' ~ name if relative else name) | urlencode }}">{{ name }}/</a></td>
+            <td></td>
+            <td></td>
+          </tr>
+          {% endfor %}
+          {% for name, size in files %}
+          <tr>
+            <td class="text-break">{{ name }}</td>
+            <td class="text-end text-nowrap">{{ size | size }}</td>
+            <td class="text-end">
+              <form method="post" action="/bios/delete" data-confirm="Delete {{ name }} for good?" onsubmit="return confirm(this.dataset.confirm)">
+                <input type="hidden" name="next" value="{{ here }}">
+                <input type="hidden" name="path" value="{{ relative ~ '/' ~ name if relative else name }}">
+                <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if not folders and not files and not listing_error %}
+          <tr><td colspan="3" class="text-center text-body-secondary py-3">Empty folder</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+    <h3 class="h6">Add files to bios/{{ relative }}</h3>
+    {% call transfer("/bios", "Folder", "/bios?path=", "Show the files", "New subfolder", "e.g. amiga") %}
+    <input type="hidden" name="folder" value="{{ relative }}" data-transfer-target>
+    {% endcall %}
+  </section>
+</main>
+{% endblock %}

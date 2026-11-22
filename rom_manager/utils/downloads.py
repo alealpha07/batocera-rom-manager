@@ -5,18 +5,22 @@ import urllib.parse
 
 import aiohttp
 
-from .es import all_systems
-from .roms import CHUNK_SIZE, RomError, check_space, clean_name, destination, extension_warning, save_stream, target_dir
+from .roms import CHUNK_SIZE, RomError, check_space, clean_name, destination, save_stream
 
 MAX_KEPT_JOBS = 50
 ACTIVE_STATES = ("queued", "downloading")
 DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(sock_connect=20, sock_read=120)
 
 
+class Target:
+    def __init__(self, area, folder, place, subfolder="", reload_es=False, warning=None):
+        self.area, self.folder, self.place, self.subfolder = area, folder, place, subfolder
+        self.reload_es, self.warning = reload_es, warning or (lambda name: None)
+
+
 class Job:
-    def __init__(self, job_id, url, system, subfolder, overwrite, name):
-        self.id, self.url, self.system, self.subfolder = job_id, url, system, subfolder
-        self.overwrite, self.name = overwrite, name
+    def __init__(self, job_id, url, target, overwrite, name):
+        self.id, self.url, self.target, self.overwrite, self.name = job_id, url, target, overwrite, name
         self.status, self.received, self.total = "queued", 0, None
         self.error = self.warning = self.task = None
 
@@ -24,9 +28,8 @@ class Job:
         self.received += size
 
     def as_dict(self):
-        return {"id": self.id, "url": self.url, "name": self.name, "system": self.system,
-                "system_fullname": all_systems().get(self.system, {}).get("fullname", self.system),
-                "subfolder": self.subfolder, "status": self.status, "received": self.received,
+        return {"id": self.id, "url": self.url, "name": self.name, "place": self.target.place,
+                "subfolder": self.target.subfolder, "status": self.status, "received": self.received,
                 "total": self.total, "error": self.error, "warning": self.warning}
 
 
@@ -63,15 +66,13 @@ class DownloadQueue:
         self.next_id = itertools.count(1)
         self.saved_since_reload = False
 
-    def add(self, urls_text, system, subfolder, overwrite, name=""):
-        target_dir(system, subfolder)
+    def add(self, urls_text, target, overwrite, name=""):
         urls = clean_urls(urls_text)
         if name.strip():
             if len(urls) > 1:
                 raise RomError("A file name can only be set for a single link")
             name = clean_name(name)
-        jobs = [Job(next(self.next_id), url, system, subfolder.strip(), overwrite, name.strip() or None)
-                for url in urls]
+        jobs = [Job(next(self.next_id), url, target, overwrite, name.strip() or None) for url in urls]
         for job in jobs:
             self.jobs[job.id] = job
             self.pending.put_nowait(job)
@@ -87,8 +88,9 @@ class DownloadQueue:
         else:
             job.status = "cancelled"
 
-    def snapshot(self):
-        return [job.as_dict() for job in sorted(self.jobs.values(), key=lambda j: j.id, reverse=True)]
+    def snapshot(self, area):
+        return [job.as_dict() for job in sorted(self.jobs.values(), key=lambda j: j.id, reverse=True)
+                if job.target.area == area]
 
     def prune(self):
         finished = [job_id for job_id, job in sorted(self.jobs.items()) if job.status not in ACTIVE_STATES]
@@ -122,7 +124,7 @@ class DownloadQueue:
     async def download(self, job, session):
         job.status = "downloading"
         try:
-            folder = target_dir(job.system, job.subfolder)
+            folder = job.target.folder
             async with session.get(job.url) as response:
                 response.raise_for_status()
                 job.name = clean_name(job.name or name_from_response(response, job.url))
@@ -139,5 +141,6 @@ class DownloadQueue:
         except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as error:
             job.status, job.error = "failed", describe_error(error)
             return
-        job.status, job.warning = "done", extension_warning(job.system, job.name)
-        self.saved_since_reload = True
+        job.status = "done"
+        job.warning = await asyncio.to_thread(job.target.warning, job.name)
+        self.saved_since_reload = self.saved_since_reload or job.target.reload_es

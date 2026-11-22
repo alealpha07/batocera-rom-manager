@@ -7,6 +7,8 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = "/userdata/system/configs/rom-manager/config.json"
 ES_API = "http://127.0.0.1:1234"
 ROMS_DIR = "/userdata/roms"
+BIOS_DIR = "/userdata/bios"
+BIOS_CHECKER = "/usr/bin/batocera-systems"
 
 
 def load_config():

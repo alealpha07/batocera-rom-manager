@@ -1,7 +1,8 @@
 "use strict";
 
-const systemSelect = document.getElementById("system");
-const extensionsHint = document.getElementById("extensions");
+const transfer = document.getElementById("transfer");
+const targetField = transfer.querySelector("[data-transfer-target]");
+const targetHint = document.getElementById("target-hint");
 const subfolderInput = document.getElementById("subfolder");
 const overwriteCheck = document.getElementById("overwrite");
 const uploadForm = document.getElementById("upload-form");
@@ -20,10 +21,12 @@ const STATUS_STYLES = {queued: "secondary", downloading: "primary", done: "succe
 let uploading = false;
 let pollTimer = null;
 
-function showExtensions() {
-  const option = systemSelect.selectedOptions[0];
+function showTargetHint() {
+  const option = targetField.selectedOptions && targetField.selectedOptions[0];
   const extensions = option && option.dataset.extensions;
-  extensionsHint.textContent = extensions ? "Listed by ES: " + extensions : "";
+  if (targetHint) {
+    targetHint.textContent = extensions ? "Listed by ES: " + extensions : "";
+  }
 }
 
 function humanSize(size) {
@@ -37,7 +40,7 @@ function humanSize(size) {
 }
 
 function sharedFields() {
-  return {system: systemSelect.value, subfolder: subfolderInput.value.trim(), overwrite: overwriteCheck.checked};
+  return {[targetField.name]: targetField.value, subfolder: subfolderInput.value.trim(), overwrite: overwriteCheck.checked};
 }
 
 async function postJson(url, body) {
@@ -88,12 +91,12 @@ function setProgress(fraction, text) {
 
 function setBusy(busy) {
   uploading = busy;
-  for (const element of [systemSelect, subfolderInput, overwriteCheck, filesInput, uploadForm.querySelector("button")]) {
+  for (const element of [targetField, subfolderInput, overwriteCheck, filesInput, uploadForm.querySelector("button")]) {
     element.disabled = busy;
   }
 }
 
-function finishUpload(result, system) {
+function finishUpload(result, target) {
   setBusy(false);
   const saved = result.saved || [];
   for (const file of saved) {
@@ -106,7 +109,8 @@ function finishUpload(result, system) {
     setStatus(result.error, true);
   } else {
     const count = saved.length === 1 ? "1 file saved." : saved.length + " files saved.";
-    setStatus(count, false, saved.length ? {href: "/games?system=" + encodeURIComponent(system), text: "Show the games"} : null);
+    const link = {href: transfer.dataset.doneLink + encodeURIComponent(target), text: transfer.dataset.doneText};
+    setStatus(count, false, saved.length ? link : null);
   }
   uploadProgress.classList.add("d-none");
   filesInput.value = "";
@@ -114,7 +118,7 @@ function finishUpload(result, system) {
 
 function sendFiles(files, fields) {
   const form = new FormData();
-  form.append("system", fields.system);
+  form.append(targetField.name, fields[targetField.name]);
   form.append("subfolder", fields.subfolder);
   if (fields.overwrite) {
     form.append("overwrite", "1");
@@ -123,16 +127,16 @@ function sendFiles(files, fields) {
     form.append("files", file, file.name);
   }
   const request = new XMLHttpRequest();
-  request.open("POST", "/add/upload");
+  request.open("POST", transfer.dataset.base + "/upload");
   request.responseType = "json";
   request.upload.onprogress = (event) => {
     if (event.lengthComputable) {
       setProgress(event.loaded / event.total, humanSize(event.loaded) + " of " + humanSize(event.total));
     }
   };
-  request.upload.onload = () => setProgress(1, "Saving and reloading ES…");
-  request.onload = () => finishUpload(request.response || {error: "Server error (" + request.status + ")"}, fields.system);
-  request.onerror = () => finishUpload({error: "Upload failed: the connection was lost"}, fields.system);
+  request.upload.onload = () => setProgress(1, "Saving…");
+  request.onload = () => finishUpload(request.response || {error: "Server error (" + request.status + ")"}, fields[targetField.name]);
+  request.onerror = () => finishUpload({error: "Upload failed: the connection was lost"}, fields[targetField.name]);
   setBusy(true);
   setProgress(0, "Starting…");
   request.send(form);
@@ -140,7 +144,7 @@ function sendFiles(files, fields) {
 
 async function startUpload(event) {
   event.preventDefault();
-  if (!systemSelect.reportValidity() || !filesInput.reportValidity()) {
+  if (!targetField.reportValidity() || !filesInput.reportValidity()) {
     return;
   }
   const files = Array.from(filesInput.files);
@@ -149,7 +153,7 @@ async function startUpload(event) {
   setStatus("Checking…");
   let checked;
   try {
-    checked = await postJson("/add/check", {
+    checked = await postJson(transfer.dataset.base + "/check", {
       ...fields,
       names: files.map((file) => file.name),
       size: files.reduce((total, file) => total + file.size, 0),
@@ -217,7 +221,7 @@ function actionCell(job) {
   button.textContent = "Cancel";
   button.addEventListener("click", async () => {
     button.disabled = true;
-    await fetch("/add/jobs/" + job.id + "/cancel", {method: "POST"});
+    await fetch("/jobs/" + job.id + "/cancel", {method: "POST"});
     refreshJobs();
   });
   return cell(button);
@@ -227,7 +231,7 @@ function jobRow(job) {
   const row = document.createElement("tr");
   const file = (job.subfolder ? job.subfolder + "/" : "") + (job.name || "…");
   const fileCell = cell(textBlock(file, "text-break"), textBlock(job.url, "small text-body-secondary text-break"));
-  row.append(fileCell, cell(job.system_fullname), progressCell(job), statusCell(job), actionCell(job));
+  row.append(fileCell, cell(job.place), progressCell(job), statusCell(job), actionCell(job));
   return row;
 }
 
@@ -248,7 +252,7 @@ async function refreshJobs() {
   clearTimeout(pollTimer);
   let jobs;
   try {
-    const response = await fetch("/add/jobs");
+    const response = await fetch(transfer.dataset.base + "/jobs");
     jobs = await response.json();
   } catch (error) {
     return;
@@ -261,14 +265,14 @@ async function refreshJobs() {
 
 async function startDownloads(event) {
   event.preventDefault();
-  if (!systemSelect.reportValidity() || !urlsInput.reportValidity()) {
+  if (!targetField.reportValidity() || !urlsInput.reportValidity()) {
     return;
   }
   linkError.classList.add("d-none");
   const button = linkForm.querySelector("button");
   button.disabled = true;
   try {
-    await postJson("/add/links", {...sharedFields(), urls: urlsInput.value, name: nameInput.value.trim()});
+    await postJson(transfer.dataset.base + "/links", {...sharedFields(), urls: urlsInput.value, name: nameInput.value.trim()});
     urlsInput.value = "";
     nameInput.value = "";
   } catch (error) {
@@ -291,7 +295,7 @@ function rememberTab() {
   }
 }
 
-systemSelect.addEventListener("change", showExtensions);
+targetField.addEventListener("change", showTargetHint);
 uploadForm.addEventListener("submit", startUpload);
 linkForm.addEventListener("submit", startDownloads);
 window.addEventListener("beforeunload", (event) => {
@@ -300,5 +304,5 @@ window.addEventListener("beforeunload", (event) => {
   }
 });
 document.addEventListener("DOMContentLoaded", rememberTab);
-showExtensions();
+showTargetHint();
 refreshJobs();

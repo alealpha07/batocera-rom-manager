@@ -34,3 +34,15 @@
     overscroll-behavior: contain;
   }
 }
+
+.media-thumb {
+  width: 6rem;
+  height: 4rem;
+  flex: none;
+  overflow: hidden;
+}
+
+.media-remove {
+  width: 4.5rem;
+  flex: none;
+}

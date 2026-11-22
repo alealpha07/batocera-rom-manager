@@ -1,73 +1,20 @@
 {% extends "layout.html" %}
+{% from "transfer.html" import transfer %}
 {% block title %}Add ROMs - Batocera Rom Manager{% endblock %}
 {% block body %}
 <main class="container py-3">
   <h1 class="h4 mb-3">Add ROMs</h1>
-  <div class="row g-3 mb-4">
-    <div class="col-md-5">
-      <label class="form-label" for="system">System</label>
-      <select class="form-select" id="system" required>
-        <option value="">Choose a system…</option>
-        {% for system in systems %}
-        <option value="{{ system.name }}" data-extensions="{{ system.extensions | join(' ') }}"{% if system.name == selected %} selected{% endif %}>{{ system.fullname }} ({{ system.name }})</option>
-        {% endfor %}
-      </select>
-      <div class="form-text text-break" id="extensions"></div>
-    </div>
-    <div class="col-md-4">
-      <label class="form-label" for="subfolder">Subfolder <span class="text-body-secondary">(optional)</span></label>
-      <input class="form-control" type="text" id="subfolder" maxlength="200" placeholder="e.g. Final Fantasy VII">
-    </div>
-    <div class="col-md-3 d-flex align-items-md-end">
-      <div class="form-check mb-md-2">
-        <input class="form-check-input" type="checkbox" id="overwrite">
-        <label class="form-check-label" for="overwrite">Overwrite existing files</label>
-      </div>
-    </div>
+  {% call transfer("/add", "System", "/games?system=", "Show the games", "Subfolder", "e.g. Final Fantasy VII") %}
+  <div class="col-md-5">
+    <label class="form-label" for="system">System</label>
+    <select class="form-select" id="system" name="system" data-transfer-target required>
+      <option value="">Choose a system…</option>
+      {% for system in systems %}
+      <option value="{{ system.name }}" data-extensions="{{ system.extensions | join(' ') }}"{% if system.name == selected %} selected{% endif %}>{{ system.fullname }} ({{ system.name }})</option>
+      {% endfor %}
+    </select>
+    <div class="form-text text-break" id="target-hint"></div>
   </div>
-  <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload-pane" type="button" role="tab" aria-controls="upload-pane" aria-selected="true">Upload</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="link-tab" data-bs-toggle="tab" data-bs-target="#link-pane" type="button" role="tab" aria-controls="link-pane" aria-selected="false">From link</button>
-    </li>
-  </ul>
-  <div class="tab-content border border-top-0 rounded-bottom p-3">
-    <div class="tab-pane fade show active" id="upload-pane" role="tabpanel" aria-labelledby="upload-tab" tabindex="0">
-      <form id="upload-form">
-        <label class="form-label" for="files">Files</label>
-        <input class="form-control mb-3" type="file" id="files" multiple required>
-        <button class="btn btn-primary" type="submit" id="upload-button">Upload</button>
-        <div class="progress mt-3 d-none" id="upload-progress" role="progressbar" aria-label="Upload progress" aria-valuemin="0" aria-valuemax="100">
-          <div class="progress-bar"></div>
-        </div>
-        <div class="small text-body-secondary mt-2" id="upload-status"></div>
-        <ul class="list-group mt-3" id="upload-results"></ul>
-      </form>
-    </div>
-    <div class="tab-pane fade" id="link-pane" role="tabpanel" aria-labelledby="link-tab" tabindex="0">
-      <form id="link-form">
-        <label class="form-label" for="urls">Links, one per line</label>
-        <textarea class="form-control font-monospace mb-3" id="urls" rows="4" required placeholder="https://example.com/game.zip"></textarea>
-        <label class="form-label" for="name">File name <span class="text-body-secondary">(optional, single link only)</span></label>
-        <input class="form-control mb-3" type="text" id="name" maxlength="200">
-        <button class="btn btn-primary" type="submit" id="link-button">Start download</button>
-        <div class="alert alert-danger mt-3 mb-0 d-none" id="link-error"></div>
-      </form>
-      <h2 class="h6 mt-4">Downloads</h2>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-          <thead>
-            <tr><th>File</th><th>System</th><th class="w-25">Progress</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody id="jobs">
-            <tr><td colspan="5" class="text-center text-body-secondary py-3">No downloads</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  {% endcall %}
 </main>
-<script>{% include "add/page.js" %}</script>
 {% endblock %}
