@@ -4,6 +4,7 @@
 {% block body %}
 <main class="container py-3">
   <h1 class="h4 mb-3">Add ROMs</h1>
+  {% include "flash.html" %}
   {% call transfer("/add", "System", "/games?system=", "Show the games", "Subfolder", "e.g. Final Fantasy VII") %}
   <div class="col-md-5">
     <label class="form-label" for="system">System</label>

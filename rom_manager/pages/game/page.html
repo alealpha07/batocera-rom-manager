@@ -26,6 +26,14 @@
           <p class="text-body-secondary mb-0">{{ game.fullname }}</p>
         </div>
         <div class="d-flex flex-wrap gap-2 ms-auto">
+          {% if running and running.path == game.path %}
+          <button class="btn btn-success btn-sm" type="button" disabled>Running</button>
+          {% else %}
+          <form method="post" action="{{ game_url }}/start"{% if running %} data-confirm="Quit {{ running.name }} and start this one?"{% endif %} onsubmit="if (this.dataset.confirm && !confirm(this.dataset.confirm)) return false; this.querySelector('button').disabled = true">
+            <input type="hidden" name="running" value="{{ running.path if running else '' }}">
+            <button class="btn btn-success btn-sm" type="submit">Start</button>
+          </form>
+          {% endif %}
           <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#info-modal">Edit info</button>
           {% if managed is not none %}
           <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#media-modal">Media</button>

@@ -13,6 +13,7 @@ It runs on the Batocera machine as a service and reads the game list from Emulat
 - Add ROMs by uploading them from the browser (several files at once, with a progress bar) or by giving download links (one per line, downloaded one at a time in the background).
 - Edit a game's info (name, description, genre, developer, publisher, release date, players, rating, region, favorite, hidden), replace or remove its scraped media, or delete it with its files and media.
 - BIOS page: what Batocera's own BIOS check reports as missing or wrong, with a way to upload or download each file to the exact path it needs, plus a browser of the BIOS folder.
+- Start a game on the TV from its page, and see or quit the running game from the top bar.
 
 ## Requirements
 

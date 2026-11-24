@@ -55,10 +55,9 @@ async def bios_page(request):
         report, report_error = [], "Batocera's BIOS check failed: %s" % error
     counts = library.counts(hidden=True)
     shown = [system for system in report if show_all or counts[system["name"]]]
-    return render(request, "bios", relative=relative, crumbs=breadcrumbs(relative), folders=folders, files=files,
-                  listing_error=listing_error, report_error=report_error, show_all=show_all,
-                  problems=[s for s in shown if s["problems"]], complete=[s for s in shown if not s["problems"]],
-                  here=request.path_qs)
+    return await render(request, "bios", relative=relative, crumbs=breadcrumbs(relative), folders=folders, files=files,
+                        listing_error=listing_error, report_error=report_error, show_all=show_all,
+                        problems=[s for s in shown if s["problems"]], complete=[s for s in shown if not s["problems"]])
 
 
 async def check(request):

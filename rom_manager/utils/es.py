@@ -17,6 +17,8 @@ API_TIMEOUT = aiohttp.ClientTimeout(total=5)
 RELOAD_TIMEOUT = aiohttp.ClientTimeout(total=30)
 UPLOAD_TIMEOUT = aiohttp.ClientTimeout(sock_connect=5, sock_read=60)
 RELOAD_SETTLE_SECONDS = 1
+RUNNING_TIMEOUT = aiohttp.ClientTimeout(total=2)
+WAIT_STEP_SECONDS = 0.25
 MEDIA_TIMEOUT = aiohttp.ClientTimeout(sock_connect=5, sock_read=30)
 FORWARDED_MEDIA_HEADERS = ("Content-Type", "Content-Length", "Content-Range")
 
@@ -93,6 +95,26 @@ class EmulationStation:
                                      timeout=UPLOAD_TIMEOUT) as response:
             response.raise_for_status()
 
+    async def running_game(self):
+        try:
+            async with self.session.get(ES_API + "/runningGame", timeout=RUNNING_TIMEOUT) as response:
+                game = await response.json(content_type=None) if response.status == 200 else None
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
+            return None
+        return game if isinstance(game, dict) and game.get("path") else None
+
+    async def launch(self, path):
+        async with self.session.post(ES_API + "/launch", data=path.encode(), timeout=API_TIMEOUT) as response:
+            response.raise_for_status()
+
+    async def wait_until(self, test, seconds):
+        deadline = asyncio.get_running_loop().time() + seconds
+        while not test(await self.running_game()):
+            if asyncio.get_running_loop().time() >= deadline:
+                return False
+            await asyncio.sleep(WAIT_STEP_SECONDS)
+        return True
+
     async def proxy_media(self, request, path, content_type=None):
         headers = {"Range": request.headers["Range"]} if "Range" in request.headers else {}
         async with self.session.get(ES_API + path, headers=headers, timeout=MEDIA_TIMEOUT) as upstream:
@@ -105,7 +127,10 @@ class EmulationStation:
             response.headers["Accept-Ranges"] = "bytes"
             response.headers["Cache-Control"] = "private, max-age=86400"
             await response.prepare(request)
-            async for chunk in upstream.content.iter_chunked(1 << 16):
-                await response.write(chunk)
+            try:
+                async for chunk in upstream.content.iter_chunked(1 << 16):
+                    await response.write(chunk)
+            except ConnectionResetError:
+                return response
             await response.write_eof()
             return response

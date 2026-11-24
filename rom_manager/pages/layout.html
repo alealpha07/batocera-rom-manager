@@ -12,7 +12,15 @@
     <div class="container-fluid">
       <a class="navbar-brand" href="/">Batocera Rom Manager</a>
       {% if logged_in %}
-      <div class="d-flex gap-2">
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        {% if running %}
+        <form class="d-flex align-items-center gap-2 me-2" method="post" action="/running/quit" data-confirm="Quit {{ running.name }}? Unsaved progress is lost." onsubmit="if (!confirm(this.dataset.confirm)) return false; this.querySelector('button').disabled = true">
+          <input type="hidden" name="next" value="{{ here }}">
+          <input type="hidden" name="running" value="{{ running.path }}">
+          <a class="running-game text-truncate" href="{{ running.url }}" title="{{ running.name }} is running">▶&#xFE0E; {{ running.name }}</a>
+          <button class="btn btn-danger btn-sm" type="submit">Quit</button>
+        </form>
+        {% endif %}
         <a class="btn btn-outline-primary btn-sm" href="/bios">BIOS</a>
         <a class="btn btn-primary btn-sm" href="/add">Add ROMs</a>
         <form method="post" action="/logout">

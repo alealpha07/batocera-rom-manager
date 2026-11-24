@@ -11,12 +11,12 @@ async def login(request):
     if not config.get("password"):
         raise web.HTTPFound("/setup")
     if request.method != "POST":
-        return render(request, "login")
+        return await render(request, "login")
     form = await request.post()
     if await asyncio.to_thread(auth.check_password, form.get("password", ""), config["password"]):
         auth.redirect_with_session(config)
     await asyncio.sleep(1)
-    return render(request, "login", error="Wrong password")
+    return await render(request, "login", error="Wrong password")
 
 
 async def logout(request):

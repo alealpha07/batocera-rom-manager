@@ -9,6 +9,7 @@ ES_API = "http://127.0.0.1:1234"
 ROMS_DIR = "/userdata/roms"
 BIOS_DIR = "/userdata/bios"
 BIOS_CHECKER = "/usr/bin/batocera-systems"
+HOTKEYGEN = "/usr/bin/hotkeygen"
 
 
 def load_config():

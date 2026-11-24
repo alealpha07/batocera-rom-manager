@@ -17,9 +17,9 @@ async def games(request):
     hidden = request.query.get("hidden") == "1"
     selected = library.select(system, query, sort, hidden)
     params = {key: value for key, value in request.query.items() if value}
-    return render(request, "games", sidebar=sidebar(request, hidden, system), games=selected,
-                  total_size=sum(g["size"] for g in selected), current=system, query=query, sort=sort,
-                  hidden=hidden, params=params, path=request.path_qs, error=library.error)
+    return await render(request, "games", sidebar=sidebar(request, hidden, system), games=selected,
+                        total_size=sum(g["size"] for g in selected), current=system, query=query, sort=sort,
+                        hidden=hidden, params=params, path=request.path_qs, error=library.error)
 
 
 async def refresh(request):

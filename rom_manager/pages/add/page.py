@@ -30,7 +30,7 @@ ROMS = transfer.Area(rom_folder, rom_warning, rom_target, rescan)
 
 async def add(request):
     systems = sorted(all_systems().values(), key=lambda s: s["fullname"].lower())
-    return render(request, "add", systems=systems, selected=request.query.get("system", ""))
+    return await render(request, "add", systems=systems, selected=request.query.get("system", ""))
 
 
 async def check(request):

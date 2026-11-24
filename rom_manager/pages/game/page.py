@@ -4,12 +4,14 @@ import urllib.parse
 import aiohttp
 from aiohttp import web
 
+from ...utils.emulator import game_title, quit_game
 from ...utils.library import MEDIA_KINDS, file_list, game_details, game_media, info_changes, info_form
 from ...utils.roms import (IMAGE_TYPES, VIDEO_TYPES, RomError, delete_game, delete_plan, delete_unused_media,
                            game_media_files, media_content_type, media_versions, remove_game_media)
 from ..layout import flash, part_chunks, render, sidebar
 
 ES_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
+START_WAIT_SECONDS = 5
 
 
 async def find_game(request):
@@ -37,12 +39,12 @@ async def game(request):
     files, more_files = await asyncio.to_thread(file_list, found)
     managed, more_managed = await asyncio.to_thread(managed_files, found)
     versions = await asyncio.to_thread(media_versions, found)
-    return render(request, "game", sidebar=sidebar(request, False, found["group"]), current=found["group"],
-                  hidden=False, game=found, game_url=game_url(found), details=game_details(found),
-                  media=game_media(found), info=info_form(found["es"]), files=files, more_files=more_files,
-                  managed=managed, more_managed=more_managed, versions=versions, media_kinds=MEDIA_KINDS,
-                  accept={"image": ",".join(IMAGE_TYPES), "video": ",".join(VIDEO_TYPES)},
-                  error=request.app["library"].error)
+    return await render(request, "game", sidebar=sidebar(request, False, found["group"]), current=found["group"],
+                        hidden=False, game=found, game_url=game_url(found), details=game_details(found),
+                        media=game_media(found), info=info_form(found["es"]), files=files, more_files=more_files,
+                        managed=managed, more_managed=more_managed, versions=versions, media_kinds=MEDIA_KINDS,
+                        accept={"image": ",".join(IMAGE_TYPES), "video": ",".join(VIDEO_TYPES)},
+                        error=request.app["library"].error)
 
 
 async def media(request):
@@ -145,4 +147,29 @@ async def delete(request):
         es_updated = False
         flash(response, "danger", "Couldn't delete %s: %s" % (found["name"], error))
     await (library.refresh(es) if es_updated else library.rescan(es))
+    raise response
+
+
+async def start_game(es, found, confirmed):
+    running = await es.running_game()
+    if running and running["path"] == found["path"]:
+        return "warning", "%s is already running" % found["name"]
+    if running and running["path"] != confirmed:
+        return "warning", "%s is running now, press Start again to switch" % game_title(running)
+    if running and not await quit_game(es):
+        return "danger", "Not started: %s didn't quit" % game_title(running)
+    await es.launch(found["path"])
+    if await es.wait_until(lambda game: game is not None and game["path"] == found["path"], START_WAIT_SECONDS):
+        return "success", "Started %s on the TV" % found["name"]
+    return "warning", "Sent %s to EmulationStation, but it didn't report it running" % found["name"]
+
+
+async def start(request):
+    found = await find_game(request)
+    form = await request.post()
+    response = web.HTTPFound(game_url(found))
+    try:
+        flash(response, *await start_game(request.app["es"], found, form.get("running", "")))
+    except ES_ERRORS:
+        flash(response, "danger", "Not started: EmulationStation isn't answering")
     raise response
