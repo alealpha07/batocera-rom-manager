@@ -71,10 +71,8 @@
     if (!result) {
       return;
     }
-    const verdict = result.skipped ? "skipped" : result.passed ? "passed" : "failed";
-    lastTitle.textContent = `${result.name}: ${verdict}, ${result.reason}`;
-    lastTitle.className = "small fw-semibold text-break " +
-      (result.skipped ? "text-body-secondary" : result.passed ? "text-success" : "text-danger");
+    lastTitle.textContent = `${result.name}: ${result.passed ? "passed" : "failed"}, ${result.reason}`;
+    lastTitle.className = "small fw-semibold text-break " + (result.passed ? "text-success" : "text-danger");
     lastLines.replaceChildren(...(result.lines || []).map(line => {
       const item = document.createElement("li");
       item.textContent = line;
@@ -95,7 +93,7 @@
     current.textContent = status.running && !status.message
       ? `Checking ${position}/${status.total}: ${status.current}` : status.running ? status.message : finishedText();
     bar.style.width = `${100 * status.done / status.total}%`;
-    counts.textContent = `${status.passed} passed, ${status.failed} failed, ${status.skipped} skipped ` +
+    counts.textContent = `${status.passed} passed, ${status.failed} failed ` +
       `(${status.seconds} s per game)`;
     showLast();
   }

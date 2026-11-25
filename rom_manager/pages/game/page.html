@@ -47,7 +47,7 @@
             <button class="btn btn-success btn-sm" type="submit">Start</button>
           </form>
           {% endif %}
-          <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#check-modal" data-check-game="{{ game.group }}/{{ game.id }}" data-check-label="{{ game.name }} ({{ game.fullname }})">Boot check</button>
+          {% if can_check %}<button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#check-modal" data-check-game="{{ game.group }}/{{ game.id }}" data-check-label="{{ game.name }} ({{ game.fullname }})">Boot check</button>{% endif %}
           <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#info-modal">Edit info</button>
           {% if managed is not none %}
           <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#media-modal">Media</button>

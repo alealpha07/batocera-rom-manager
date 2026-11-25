@@ -1,19 +1,23 @@
+import asyncio
+
 from aiohttp import web
 
-from ...utils.boot_check import ES_ERRORS, CheckError, parse_seconds
+from ...utils.boot_check import ES_ERRORS, CheckError, checkable, parse_seconds
 from ...utils.emulator import game_title
 
 
 def scope_games(library, data):
     scope = data.get("scope")
     if scope == "library":
-        return library.select(hidden=True)
+        return checkable(library.select())
     if scope == "system":
         system = str(data.get("system") or "")
-        return library.select(system, hidden=True) if system else []
+        return checkable(library.select(system)) if system else []
     if scope == "game":
         group, _, game_id = str(data.get("game") or "").partition("/")
         found = library.game(group, game_id)
+        if found and not checkable([found]):
+            raise CheckError("%s is hidden or not a game" % found["name"])
         return [found] if found else []
     raise CheckError("Pick what to check")
 
@@ -26,7 +30,7 @@ async def start(request):
             raise CheckError("A boot check is already running")
         data = await request.json()
         seconds = parse_seconds(data.get("seconds"))
-        games = sorted(scope_games(library, data), key=lambda g: g["group_fullname"].lower())
+        games = sorted(await asyncio.to_thread(scope_games, library, data), key=lambda g: g["group_fullname"].lower())
         if games and data.get("skip_passed"):
             games = [g for g in games if not (boot_check.result(g["path"]) or {}).get("passed")]
             if not games:
@@ -57,7 +61,7 @@ async def stop(request):
 async def games(request):
     library = request.app["library"]
     await library.ensure_loaded(request.app["es"])
-    games = library.select(hidden=True)
+    games = await asyncio.to_thread(checkable, library.select())
     systems = {g["group"]: g["group_fullname"] for g in games}
     return web.json_response({
         "systems": [{"name": name, "fullname": fullname}

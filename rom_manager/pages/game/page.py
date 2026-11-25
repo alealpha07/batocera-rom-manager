@@ -4,6 +4,7 @@ import urllib.parse
 import aiohttp
 from aiohttp import web
 
+from ...utils.boot_check import is_game
 from ...utils.emulator import game_title, quit_game
 from ...utils.library import MEDIA_KINDS, file_list, game_details, game_media, info_changes, info_form
 from ...utils.roms import (IMAGE_TYPES, VIDEO_TYPES, RomError, delete_game, delete_plan, delete_unused_media,
@@ -40,12 +41,13 @@ async def game(request):
     files, more_files = await asyncio.to_thread(file_list, found)
     managed, more_managed = await asyncio.to_thread(managed_files, found)
     versions = await asyncio.to_thread(media_versions, found)
+    can_check = await asyncio.to_thread(is_game, found)
     return await render(request, "game", sidebar=sidebar(request, False, found["group"]), current=found["group"],
                         hidden=False, game=found, game_url=game_url(found), details=game_details(found),
                         media=game_media(found), info=info_form(found["es"]), files=files, more_files=more_files,
                         managed=managed, more_managed=more_managed, versions=versions, media_kinds=MEDIA_KINDS,
                         accept={"image": ",".join(IMAGE_TYPES), "video": ",".join(VIDEO_TYPES)},
-                        boot=request.app["boot_check"].result(found["path"]), error=request.app["library"].error)
+                        boot=request.app["boot_check"].result(found["path"]), can_check=can_check, error=request.app["library"].error)
 
 
 async def media(request):

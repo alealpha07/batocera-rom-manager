@@ -16,8 +16,8 @@ START_WAIT_SECONDS = 15
 STAT_FIELDS = ("playcount", "lastplayed", "gametime")
 MAX_ERROR_LINES = 6
 MAX_LINE_LENGTH = 220
-SKIPPED_SYSTEMS = {"steam": "Steam games run inside the Steam client", "flatpak": "flatpak apps aren't games",
-                   "moonlight": "Moonlight streams games from another PC", "kodi": "Kodi is a media center"}
+APP_SYSTEMS = {"steam", "flatpak", "moonlight", "kodi", "windows_installers"}
+APP_EXTENSIONS = (".xci_config",)
 TOOL_SCRIPT = re.compile(r"\b(wget|curl|pacman|apt-get|install|updater?|git clone)\b", re.I)
 LOG_PREFIX = re.compile(r"^\[[^\]]*\] \[(\w+)\s*\] \(([^)]*)\): (?:\[(?:stderr|stdout)\] )?")
 ERROR_WORDS = re.compile(r"\b(error|fatal|fail(ed|ure)?|could ?n[o']t|cannot|can't|unable|missing|not found|"
@@ -61,17 +61,20 @@ def parse_seconds(value):
     return seconds
 
 
-def skip_reason(game):
-    if game["system"] in SKIPPED_SYSTEMS:
-        return SKIPPED_SYSTEMS[game["system"]]
+def is_game(game):
+    if game["hidden"] or game["system"] in APP_SYSTEMS or game["path"].lower().endswith(APP_EXTENSIONS):
+        return False
     if game["path"].endswith(".sh"):
         try:
             with open(game["path"], errors="ignore") as fh:
-                if TOOL_SCRIPT.search(fh.read()):
-                    return "it looks like a tool or installer, not a game"
+                return not TOOL_SCRIPT.search(fh.read())
         except OSError:
             pass
-    return None
+    return True
+
+
+def checkable(games):
+    return [game for game in games if is_game(game)]
 
 
 def error_lines(text):
@@ -177,7 +180,7 @@ class BootCheck:
             raise CheckError("A boot check is already running")
         if not games:
             raise CheckError("No games to check")
-        self.progress = {"total": len(games), "done": 0, "passed": 0, "failed": 0, "skipped": 0,
+        self.progress = {"total": len(games), "done": 0, "passed": 0, "failed": 0,
                          "current": "quitting %s" % quit_first if quit_first else games[0]["name"],
                          "seconds": seconds, "message": "", "last": None}
         self.task = asyncio.create_task(self.run(app, games, seconds, quit_first))
@@ -204,16 +207,11 @@ class BootCheck:
                 running = await es.running_game()
                 if running:
                     raise CheckError("Stopped: %s was started on the TV" % game_title(running))
-                reason = await asyncio.to_thread(skip_reason, game)
-                if reason:
-                    progress["skipped"] += 1
-                    progress["last"] = {"name": game["name"], "skipped": True, "reason": reason}
-                else:
-                    result = await boot_game(es, game, seconds)
-                    self.results[game["path"]] = result
-                    await asyncio.to_thread(save_results, self.results)
-                    progress["passed" if result["passed"] else "failed"] += 1
-                    progress["last"] = dict(result, name=game["name"])
+                result = await boot_game(es, game, seconds)
+                self.results[game["path"]] = result
+                await asyncio.to_thread(save_results, self.results)
+                progress["passed" if result["passed"] else "failed"] += 1
+                progress["last"] = dict(result, name=game["name"])
                 progress["done"] += 1
             progress["message"] = "Done"
         except asyncio.CancelledError:
