@@ -91,10 +91,14 @@ async def stop_game(es):
     return await es.wait_until(is_idle, EXIT_WAIT_SECONDS)
 
 
-async def quit_game(es):
-    if not await stop_game(es):
-        return False
+async def wait_es_ready():
     # ES queues or drops a launch that comes while it is still returning from the game
     await wait_hotkey_context(lambda name: name == ES_HOTKEY_CONTEXT, EXIT_WAIT_SECONDS)
     await asyncio.sleep(ES_SETTLE_SECONDS)
+
+
+async def quit_game(es):
+    if not await stop_game(es):
+        return False
+    await wait_es_ready()
     return True

@@ -6,14 +6,18 @@ import jinja2
 from aiohttp import web
 
 from .config import APP_DIR, load_config
-from .pages import layout, transfer
+from .pages import layout
 from .pages.add import page as add
 from .pages.bios import page as bios
+from .pages.check import check
 from .pages.game import page as game
 from .pages.games import page as games
 from .pages.login import page as login
 from .pages.setup import page as setup
+from .pages.sidebar import sidebar
+from .pages.transfer import transfer
 from .utils import auth
+from .utils.boot_check import BootCheck
 from .utils.downloads import DownloadQueue
 from .utils.es import EmulationStation
 from .utils.library import Library
@@ -34,6 +38,11 @@ async def download_worker(app):
         await worker
 
 
+async def boot_check_task(app):
+    yield
+    await app["boot_check"].shutdown()
+
+
 def create_app():
     app = web.Application(middlewares=[auth.login_required])
     app["config"] = load_config()
@@ -43,15 +52,21 @@ def create_app():
     app["es"] = EmulationStation()
     app["library"] = Library()
     app["downloads"] = DownloadQueue()
+    app["boot_check"] = BootCheck()
     app.cleanup_ctx.append(es_session)
     app.cleanup_ctx.append(download_worker)
+    app.cleanup_ctx.append(boot_check_task)
     app.router.add_static("/static", os.path.join(APP_DIR, "static"))
     app.router.add_get("/", games.index)
     app.router.add_route("*", "/setup", setup.setup)
     app.router.add_route("*", "/login", login.login)
     app.router.add_post("/logout", login.logout)
-    app.router.add_post("/sidebar/empty", layout.toggle_empty_systems)
+    app.router.add_post("/sidebar/empty", sidebar.toggle_empty_systems)
     app.router.add_post("/running/quit", layout.quit_running)
+    app.router.add_post("/check", check.start)
+    app.router.add_get("/check/status", check.status)
+    app.router.add_post("/check/stop", check.stop)
+    app.router.add_get("/check/games", check.games)
     app.router.add_get("/games", games.games)
     app.router.add_post("/refresh", games.refresh)
     app.router.add_get("/game/{system}/{game_id}", game.game)

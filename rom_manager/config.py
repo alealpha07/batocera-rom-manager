@@ -5,6 +5,7 @@ HOST = "0.0.0.0"
 PORT = 18765
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = "/userdata/system/configs/rom-manager/config.json"
+HEALTH_FILE = "/userdata/system/configs/rom-manager/health.json"
 ES_API = "http://127.0.0.1:1234"
 ROMS_DIR = "/userdata/roms"
 BIOS_DIR = "/userdata/bios"

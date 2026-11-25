@@ -4,7 +4,7 @@
 {% block body %}
 <div class="container-fluid">
   <div class="row">
-    {% include "sidebar.html" %}
+    {% include "sidebar/sidebar.html" %}
     <main class="col-md-9 col-xl-10 py-3">
       <button class="btn btn-outline-secondary btn-sm d-md-none mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">Systems</button>
       {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
@@ -24,9 +24,22 @@
             {% if game.hidden %}<span class="badge text-bg-secondary align-middle fs-6">hidden</span>{% endif %}
           </h1>
           <p class="text-body-secondary mb-0">{{ game.fullname }}</p>
+          {% if boot %}
+          <div class="small mt-2 {{ 'text-success' if boot.passed else 'text-danger' }}">
+            <span class="boot-dot {{ 'bg-success' if boot.passed else 'bg-danger' }}"></span>
+            Boot check {{ "passed" if boot.passed else "failed" }} on {{ boot.date }}: {{ boot.reason }}
+            {% if boot.lines %}
+            <ul class="font-monospace text-break text-body-secondary mb-0 mt-1">
+              {% for line in boot.lines %}<li>{{ line }}</li>{% endfor %}
+            </ul>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
         <div class="d-flex flex-wrap gap-2 ms-auto">
-          {% if running and running.path == game.path %}
+          {% if checking %}
+          <button class="btn btn-success btn-sm" type="button" disabled title="A boot check is running">Start</button>
+          {% elif running and running.path == game.path %}
           <button class="btn btn-success btn-sm" type="button" disabled>Running</button>
           {% else %}
           <form method="post" action="{{ game_url }}/start"{% if running %} data-confirm="Quit {{ running.name }} and start this one?"{% endif %} onsubmit="if (this.dataset.confirm && !confirm(this.dataset.confirm)) return false; this.querySelector('button').disabled = true">
@@ -34,6 +47,7 @@
             <button class="btn btn-success btn-sm" type="submit">Start</button>
           </form>
           {% endif %}
+          <button class="btn btn-outline-success btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#check-modal" data-check-game="{{ game.group }}/{{ game.id }}" data-check-label="{{ game.name }} ({{ game.fullname }})">Boot check</button>
           <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#info-modal">Edit info</button>
           {% if managed is not none %}
           <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#media-modal">Media</button>

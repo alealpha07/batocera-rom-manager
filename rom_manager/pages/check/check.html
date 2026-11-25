@@ -1,0 +1,63 @@
+<div class="modal fade" id="check-modal" tabindex="-1" aria-labelledby="check-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <form class="modal-content" id="check-form" novalidate>
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="check-title">Boot check</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-body-secondary">Starts each game on the TV, waits, then quits it. A game passes if it is still running and the emulator logged no errors: it only tells whether the game boots without crashing. Play stats are left as they were.</p>
+        <div id="check-setup">
+          <div class="mb-3">
+            {% for value, label in (("library", "Whole library"), ("system", "One system"), ("game", "One game")) %}
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="radio" name="scope" id="check-scope-{{ value }}" value="{{ value }}"{% if loop.first %} checked{% endif %}>
+              <label class="form-check-label" for="check-scope-{{ value }}">{{ label }}</label>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="mb-3" data-check-scope="system" hidden>
+            <label class="form-label" for="check-system">System</label>
+            <select class="form-select" id="check-system"></select>
+          </div>
+          <div class="mb-3" data-check-scope="game" hidden>
+            <label class="form-label" for="check-game">Game</label>
+            <input class="form-control" id="check-game" list="check-games" placeholder="Type to search" autocomplete="off">
+            <datalist id="check-games"></datalist>
+          </div>
+          <div class="row g-3 align-items-end">
+            <div class="col-6">
+              <label class="form-label" for="check-seconds">Seconds per game</label>
+              <input class="form-control" id="check-seconds" type="number" min="5" max="120" value="20" required>
+            </div>
+            <div class="col-6">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="check-skip-passed">
+                <label class="form-check-label" for="check-skip-passed">Skip games that already passed</label>
+              </div>
+            </div>
+          </div>
+          <div class="text-danger small mt-3" id="check-error" role="alert"></div>
+        </div>
+        <div id="check-progress" hidden>
+          <p class="mb-2 text-break" id="check-current"></p>
+          <div class="progress mb-2" role="progressbar" aria-label="Boot check progress">
+            <div class="progress-bar" id="check-bar"></div>
+          </div>
+          <p class="small mb-3" id="check-counts"></p>
+          <div id="check-last" hidden>
+            <div class="small fw-semibold text-break" id="check-last-title"></div>
+            <ul class="small font-monospace text-break mb-0 mt-1" id="check-last-lines"></ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-outline-primary" id="check-new" hidden>New check</button>
+        <button type="button" class="btn btn-danger" id="check-stop" hidden>Stop</button>
+        <button type="submit" class="btn btn-primary" id="check-run">Run check</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>{% include "check/check.js" %}</script>

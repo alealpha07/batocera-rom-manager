@@ -13,7 +13,9 @@
       <a class="navbar-brand" href="/">Batocera Rom Manager</a>
       {% if logged_in %}
       <div class="d-flex flex-wrap align-items-center gap-2">
-        {% if running %}
+        {% if checking %}
+        <button class="btn btn-warning btn-sm me-2" type="button" data-bs-toggle="modal" data-bs-target="#check-modal">Checking {{ [checking.done + 1, checking.total] | min }}/{{ checking.total }}</button>
+        {% elif running %}
         <form class="d-flex align-items-center gap-2 me-2" method="post" action="/running/quit" data-confirm="Quit {{ running.name }}? Unsaved progress is lost." onsubmit="if (!confirm(this.dataset.confirm)) return false; this.querySelector('button').disabled = true">
           <input type="hidden" name="next" value="{{ here }}">
           <input type="hidden" name="running" value="{{ running.path }}">
@@ -21,16 +23,18 @@
           <button class="btn btn-danger btn-sm" type="submit">Quit</button>
         </form>
         {% endif %}
-        <a class="btn btn-outline-primary btn-sm" href="/bios">BIOS</a>
-        <a class="btn btn-primary btn-sm" href="/add">Add ROMs</a>
         <form method="post" action="/logout">
           <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
         </form>
+        <a class="btn btn-outline-primary btn-sm" href="/bios">BIOS</a>
+        <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#check-modal"{% if current %} data-check-system="{{ current }}"{% endif %}>Boot check</button>
+        <a class="btn btn-primary btn-sm" href="/add">Add ROMs</a>
       </div>
       {% endif %}
     </div>
   </nav>
   {% block body %}{% endblock %}
+  {% if logged_in %}{% include "check/check.html" %}{% endif %}
   <script src="/static/vendor/bootstrap/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -18,6 +18,15 @@
   max-width: 12rem;
 }
 
+.boot-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+}
+
 :root {
   --navbar-height: 3.5rem;
 }

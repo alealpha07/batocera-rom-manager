@@ -8,7 +8,8 @@ from ...utils.emulator import game_title, quit_game
 from ...utils.library import MEDIA_KINDS, file_list, game_details, game_media, info_changes, info_form
 from ...utils.roms import (IMAGE_TYPES, VIDEO_TYPES, RomError, delete_game, delete_plan, delete_unused_media,
                            game_media_files, media_content_type, media_versions, remove_game_media)
-from ..layout import flash, part_chunks, render, sidebar
+from ..layout import flash, part_chunks, render
+from ..sidebar.sidebar import sidebar
 
 ES_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
 START_WAIT_SECONDS = 5
@@ -44,7 +45,7 @@ async def game(request):
                         media=game_media(found), info=info_form(found["es"]), files=files, more_files=more_files,
                         managed=managed, more_managed=more_managed, versions=versions, media_kinds=MEDIA_KINDS,
                         accept={"image": ",".join(IMAGE_TYPES), "video": ",".join(VIDEO_TYPES)},
-                        error=request.app["library"].error)
+                        boot=request.app["boot_check"].result(found["path"]), error=request.app["library"].error)
 
 
 async def media(request):
@@ -142,6 +143,7 @@ async def delete(request):
         except ES_ERRORS:
             es_updated = False
         await asyncio.to_thread(delete_game, found, plan)
+        await asyncio.to_thread(request.app["boot_check"].forget, found["path"])
         flash(response, "success", "Deleted %s" % found["name"])
     except (RomError, OSError) as error:
         es_updated = False
@@ -168,6 +170,9 @@ async def start(request):
     found = await find_game(request)
     form = await request.post()
     response = web.HTTPFound(game_url(found))
+    if request.app["boot_check"].running:
+        flash(response, "warning", "A boot check is running: stop it first")
+        raise response
     try:
         flash(response, *await start_game(request.app["es"], found, form.get("running", "")))
     except ES_ERRORS:

@@ -7,8 +7,8 @@ from aiohttp import web
 from ...utils import bios
 from ...utils.downloads import Target
 from ...utils.roms import RomError, save_stream
-from .. import transfer
 from ..layout import flash, part_chunks, render, safe_next
+from ..transfer import transfer
 
 
 def folder_for(fields):

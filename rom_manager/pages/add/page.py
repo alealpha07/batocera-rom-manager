@@ -3,8 +3,8 @@ from aiohttp import web
 from ...utils.downloads import Target
 from ...utils.es import all_systems
 from ...utils.roms import extension_warning, target_dir
-from .. import transfer
 from ..layout import render
+from ..transfer import transfer
 
 
 def rom_folder(fields):

@@ -6,7 +6,7 @@
 {% block body %}
 <div class="container-fluid">
   <div class="row">
-    {% include "sidebar.html" %}
+    {% include "sidebar/sidebar.html" %}
     <main class="col-md-9 col-xl-10 py-3">
       <button class="btn btn-outline-secondary btn-sm d-md-none mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar">Systems</button>
       {% if error %}<div class="alert alert-warning">{{ error }}</div>{% endif %}
@@ -20,6 +20,10 @@
           <div class="form-check mb-0">
             <input class="form-check-input" type="checkbox" id="show-hidden" name="hidden" value="1"{% if hidden %} checked{% endif %} onchange="this.form.submit()">
             <label class="form-check-label" for="show-hidden">Show hidden</label>
+          </div>
+          <div class="form-check mb-0">
+            <input class="form-check-input" type="checkbox" id="only-failed" name="failed" value="1"{% if failed %} checked{% endif %} onchange="this.form.submit()">
+            <label class="form-check-label" for="only-failed">Failed boot check</label>
           </div>
         </form>
         <span class="text-body-secondary small">{{ games | length }} games, {{ total_size | size }}</span>
@@ -42,13 +46,19 @@
           <tbody>
             {% for game in games %}
             <tr>
-              <td><a href="/game/{{ game.group | urlencode }}/{{ game.id | urlencode }}">{{ game.name }}</a>{% if game.hidden %} <span class="badge text-bg-secondary">hidden</span>{% endif %}</td>
+              {% set boot = results.get(game.path) %}
+              <td>
+                <div class="d-flex align-items-baseline">
+                  {% if boot %}<span class="boot-dot {{ 'bg-success' if boot.passed else 'bg-danger' }}" title="Boot check {{ 'passed' if boot.passed else 'failed' }} on {{ boot.date }}: {{ boot.reason }}"><span class="visually-hidden">Boot check {{ "passed" if boot.passed else "failed" }}</span></span>{% else %}<span class="boot-dot"></span>{% endif %}
+                  <div><a href="/game/{{ game.group | urlencode }}/{{ game.id | urlencode }}">{{ game.name }}</a>{% if game.hidden %} <span class="badge text-bg-secondary">hidden</span>{% endif %}</div>
+                </div>
+              </td>
               <td>{{ game.fullname }}</td>
               <td class="text-break small text-body-secondary">{{ game.file }}</td>
               <td class="text-end text-nowrap">{{ game.size | size }}</td>
             </tr>
             {% else %}
-            <tr><td colspan="4" class="text-center text-body-secondary py-4">No games</td></tr>
+            <tr><td colspan="4" class="text-center text-body-secondary py-4">{{ "No games failed the boot check" if failed else "No games" }}</td></tr>
             {% endfor %}
           </tbody>
         </table>
