@@ -28,6 +28,13 @@
         </form>
         <span class="text-body-secondary small">{{ games | length }} games, {{ total_size | size }}</span>
         {% if current %}<a class="btn btn-outline-primary btn-sm" href="/add?system={{ current | urlencode }}">Add here</a>{% endif %}
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Export</button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/games/export?{{ dict(params, format='csv') | urlencode }}" download>CSV</a></li>
+            <li><a class="dropdown-item" href="/games/export?{{ dict(params, format='txt') | urlencode }}" download>TXT</a></li>
+          </ul>
+        </div>
         <form method="post" action="/refresh">
           <input type="hidden" name="next" value="{{ path }}">
           <button class="btn btn-outline-secondary btn-sm" type="submit">Refresh</button>

@@ -68,6 +68,7 @@ def create_app():
     app.router.add_post("/check/stop", check.stop)
     app.router.add_get("/check/games", check.games)
     app.router.add_get("/games", games.games)
+    app.router.add_get("/games/export", games.export)
     app.router.add_post("/refresh", games.refresh)
     app.router.add_get("/game/{system}/{game_id}", game.game)
     app.router.add_get("/media/{system}/{game_id}/{kind}", game.media)

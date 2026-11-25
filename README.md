@@ -8,6 +8,7 @@ It runs on the Batocera machine as a service and reads the game list from Emulat
 
 - Games table with name, system, file and size, sortable by any column.
 - Search by title or file name; option to show games hidden in EmulationStation.
+- Export the games list as shown (system, search and filters) to CSV or TXT.
 - Game page with box art, screenshots, marquee and video, description, metadata, play stats and every file the game uses (tracks of `.cue`/`.gdi`, discs of `.m3u`).
 - Sidebar with every system; systems without games can be shown or hidden.
 - Add ROMs by uploading them from the browser (several files at once, with a progress bar) or by giving download links (one per line, downloaded one at a time in the background).
