@@ -24,7 +24,7 @@ ERROR_WORDS = re.compile(r"\b(error|fatal|fail(ed|ure)?|could ?n[o']t|cannot|can
                          r"crash(ed)?|not an?)\b", re.I)
 NOISE = re.compile(r"\[(libretro )?(INFO|DEBUG)\]|GET_VARIABLE|Not implemented|batocera-launch exception|"
                    r"Failed to connect to Wayland|Qt depends on a UTF-8 locale|QPainter::|^qt\.[\w.]+:|QDBusError|"
-                   r"org\.freedesktop\.|FindFileInDir: not found|^[\d-]+ [\d:.]+ (INFO|DEBUG)\s", re.I)
+                   r"org\.freedesktop\.|FindFileInDir: not found|which is already loaded|display_rom_load_results|^[\d-]+ [\d:.]+ (INFO|DEBUG)\s", re.I)
 WARNING = re.compile(r"\bWARN(ING)?\b")
 EXIT_STATUS = re.compile(r"Exiting batocera-launch with status (\d+)")
 ES_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
@@ -91,7 +91,7 @@ def launch_log(since):
         try:
             if os.path.getmtime(path) >= since:
                 with open(path, errors="replace") as fh:
-                    text += fh.read()
+                    text += fh.read() + "\n"
         except OSError:
             pass
     return text
