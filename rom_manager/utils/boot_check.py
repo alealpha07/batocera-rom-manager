@@ -16,16 +16,15 @@ START_WAIT_SECONDS = 15
 STAT_FIELDS = ("playcount", "lastplayed", "gametime")
 MAX_ERROR_LINES = 6
 MAX_LINE_LENGTH = 220
-APP_SYSTEMS = {"steam", "flatpak", "moonlight", "kodi", "windows_installers"}
+UNCHECKED_SYSTEMS = {"steam", "flatpak", "moonlight", "kodi", "windows_installers", "ports"}
 APP_EXTENSIONS = (".xci_config",)
-TOOL_SCRIPT = re.compile(r"\b(wget|curl|pacman|apt-get|install|updater?|git clone)\b", re.I)
 LOG_PREFIX = re.compile(r"^\[[^\]]*\] \[(\w+)\s*\] \(([^)]*)\): (?:\[(?:stderr|stdout)\] )?")
 ERROR_WORDS = re.compile(r"\b(error|fatal|fail(ed|ure)?|could ?n[o']t|cannot|can't|unable|missing|not found|"
                          r"no such|invalid|unsupported|corrupt(ed)?|segmentation|abort(ed)?|exception|panic|"
                          r"crash(ed)?|not an?)\b", re.I)
 NOISE = re.compile(r"\[(libretro )?(INFO|DEBUG)\]|GET_VARIABLE|Not implemented|batocera-launch exception|"
-                   r"Failed to connect to Wayland|Qt depends on a UTF-8 locale|QPainter::|qt\.qpa\.|QDBusError|"
-                   r"org\.freedesktop\.", re.I)
+                   r"Failed to connect to Wayland|Qt depends on a UTF-8 locale|QPainter::|^qt\.[\w.]+:|QDBusError|"
+                   r"org\.freedesktop\.|FindFileInDir: not found|^[\d-]+ [\d:.]+ (INFO|DEBUG)\s", re.I)
 WARNING = re.compile(r"\bWARN(ING)?\b")
 EXIT_STATUS = re.compile(r"Exiting batocera-launch with status (\d+)")
 ES_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
@@ -63,15 +62,7 @@ def parse_seconds(value):
 
 
 def is_game(game):
-    if game["hidden"] or game["system"] in APP_SYSTEMS or game["path"].lower().endswith(APP_EXTENSIONS):
-        return False
-    if game["path"].endswith(".sh"):
-        try:
-            with open(game["path"], errors="ignore") as fh:
-                return not TOOL_SCRIPT.search(fh.read())
-        except OSError:
-            pass
-    return True
+    return not (game["hidden"] or game["system"] in UNCHECKED_SYSTEMS or game["path"].lower().endswith(APP_EXTENSIONS))
 
 
 def checkable(games):

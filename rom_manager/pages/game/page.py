@@ -41,13 +41,13 @@ async def game(request):
     files, more_files = await asyncio.to_thread(file_list, found)
     managed, more_managed = await asyncio.to_thread(managed_files, found)
     versions = await asyncio.to_thread(media_versions, found)
-    can_check = await asyncio.to_thread(is_game, found)
     return await render(request, "game", sidebar=sidebar(request, False, found["group"]), current=found["group"],
                         hidden=False, game=found, game_url=game_url(found), details=game_details(found),
                         media=game_media(found), info=info_form(found["es"]), files=files, more_files=more_files,
                         managed=managed, more_managed=more_managed, versions=versions, media_kinds=MEDIA_KINDS,
                         accept={"image": ",".join(IMAGE_TYPES), "video": ",".join(VIDEO_TYPES)},
-                        boot=request.app["boot_check"].result(found["path"]), can_check=can_check, error=request.app["library"].error)
+                        boot=request.app["boot_check"].result(found["path"]), can_check=is_game(found),
+                        error=request.app["library"].error)
 
 
 async def media(request):

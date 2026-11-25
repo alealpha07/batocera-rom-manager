@@ -1,5 +1,3 @@
-import asyncio
-
 from aiohttp import web
 
 from ...utils.boot_check import ES_ERRORS, CheckError, checkable, parse_seconds
@@ -30,7 +28,7 @@ async def start(request):
             raise CheckError("A boot check is already running")
         data = await request.json()
         seconds = parse_seconds(data.get("seconds"))
-        games = sorted(await asyncio.to_thread(scope_games, library, data), key=lambda g: g["group_fullname"].lower())
+        games = sorted(scope_games(library, data), key=lambda g: g["group_fullname"].lower())
         if games and data.get("skip_passed"):
             games = [g for g in games if not (boot_check.result(g["path"]) or {}).get("passed")]
             if not games:
@@ -61,7 +59,7 @@ async def stop(request):
 async def games(request):
     library = request.app["library"]
     await library.ensure_loaded(request.app["es"])
-    games = await asyncio.to_thread(checkable, library.select())
+    games = checkable(library.select())
     systems = {g["group"]: g["group_fullname"] for g in games}
     return web.json_response({
         "systems": [{"name": name, "fullname": fullname}
