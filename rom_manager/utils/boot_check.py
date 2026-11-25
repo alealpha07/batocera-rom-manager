@@ -24,7 +24,8 @@ ERROR_WORDS = re.compile(r"\b(error|fatal|fail(ed|ure)?|could ?n[o']t|cannot|can
                          r"no such|invalid|unsupported|corrupt(ed)?|segmentation|abort(ed)?|exception|panic|"
                          r"crash(ed)?|not an?)\b", re.I)
 NOISE = re.compile(r"\[(libretro )?(INFO|DEBUG)\]|GET_VARIABLE|Not implemented|batocera-launch exception|"
-                   r"Failed to connect to Wayland|Qt depends on a UTF-8 locale|QPainter::", re.I)
+                   r"Failed to connect to Wayland|Qt depends on a UTF-8 locale|QPainter::|qt\.qpa\.|QDBusError|"
+                   r"org\.freedesktop\.", re.I)
 WARNING = re.compile(r"\bWARN(ING)?\b")
 EXIT_STATUS = re.compile(r"Exiting batocera-launch with status (\d+)")
 ES_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
