@@ -15,6 +15,7 @@ from .pages.games import page as games
 from .pages.login import page as login
 from .pages.setup import page as setup
 from .pages.sidebar import sidebar
+from .pages.support import page as support
 from .pages.transfer import transfer
 from .utils import auth
 from .utils.boot_check import BootCheck
@@ -91,4 +92,8 @@ def create_app():
     app.router.add_post("/bios/entry/link", bios.entry_link)
     app.router.add_post("/bios/delete", bios.delete)
     app.router.add_post("/jobs/{job_id}/cancel", transfer.cancel_job)
+    app.router.add_get("/support", support.support)
+    app.router.add_get("/support/status", support.status)
+    app.router.add_post("/support/restart/es", support.restart_es)
+    app.router.add_post("/support/restart/app", support.restart_app)
     return app

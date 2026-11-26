@@ -11,11 +11,13 @@ It runs on the Batocera machine as a service and reads the game list from Emulat
 - Export the games list as shown (system, search and filters) to CSV or TXT.
 - Game page with box art, screenshots, marquee and video, description, metadata, play stats and every file the game uses (tracks of `.cue`/`.gdi`, discs of `.m3u`).
 - Sidebar with every system; systems without games can be shown or hidden.
-- Add ROMs by uploading them from the browser (several files at once, with a progress bar) or by giving download links (one per line, downloaded one at a time in the background).
+- Add ROMs by uploading them from the browser (several files at once, with a progress bar) or by giving download links (one per line, up to three at a time in the background, with speed and time left).
 - Edit a game's info (name, description, genre, developer, publisher, release date, players, rating, region, favorite, hidden), replace or remove its scraped media, or delete it with its files and media.
 - BIOS page: what Batocera's own BIOS check reports as missing or wrong, with a way to upload or download each file to the exact path it needs, plus a browser of the BIOS folder.
 - Start a game on the TV from its page, and see or quit the running game from the top bar.
 - Boot check: starts a game, a system or the whole library on the TV one game at a time and marks each game green or red, depending on whether it keeps running without emulator errors. Hidden games, ports and apps (Steam, flatpak, config apps, installers) are left out.
+- Support page with the Batocera version, uptime, EmulationStation state and free space, plus buttons to restart EmulationStation or the app.
+- Light and dark theme, following the device until you pick one.
 
 ## Requirements
 

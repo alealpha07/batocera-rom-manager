@@ -6,13 +6,14 @@
   <title>{% block title %}Batocera Rom Manager{% endblock %}</title>
   <link rel="stylesheet" href="/static/vendor/bootstrap/bootstrap.min.css">
   <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/theme.js"></script>
 </head>
 <body>
   <nav class="navbar bg-body-tertiary border-bottom app-navbar">
     <div class="container-fluid">
       <a class="navbar-brand" href="/">Batocera Rom Manager</a>
-      {% if logged_in %}
       <div class="d-flex flex-wrap align-items-center gap-2">
+        {% if logged_in %}
         {% if checking %}
         <button class="btn btn-warning btn-sm me-2" type="button" data-bs-toggle="modal" data-bs-target="#check-modal">Checking {{ [checking.done + 1, checking.total] | min }}/{{ checking.total }}</button>
         {% elif running %}
@@ -23,14 +24,18 @@
           <button class="btn btn-danger btn-sm" type="submit">Quit</button>
         </form>
         {% endif %}
+        {% endif %}
+        <button class="btn btn-outline-secondary btn-sm" type="button" id="theme-switch">☾&#xFE0E;</button>
+        {% if logged_in %}
         <form method="post" action="/logout">
           <button class="btn btn-outline-secondary btn-sm" type="submit">Log out</button>
         </form>
+        <a class="btn btn-outline-primary btn-sm" href="/support">Support</a>
         <a class="btn btn-outline-primary btn-sm" href="/bios">BIOS</a>
         <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#check-modal"{% if current %} data-check-system="{{ current }}"{% endif %}>Boot check</button>
         <a class="btn btn-primary btn-sm" href="/add">Add ROMs</a>
+        {% endif %}
       </div>
-      {% endif %}
     </div>
   </nav>
   {% block body %}{% endblock %}

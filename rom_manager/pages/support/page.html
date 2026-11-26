@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+{% block title %}Support - Batocera Rom Manager{% endblock %}
+{% block body %}
+<main class="container py-3">
+  <h1 class="h4 mb-3">Support</h1>
+  {% include "flash.html" %}
+  {% if restarted == "es" %}<div class="alert alert-success">EmulationStation restarted</div>{% endif %}
+  {% if restarted == "app" %}<div class="alert alert-success">Rom Manager restarted</div>{% endif %}
+  <div class="row g-4">
+    <section class="col-lg-6">
+      <h2 class="h5">Box</h2>
+      <dl class="row mb-0">
+        <dt class="col-sm-5">Batocera</dt>
+        <dd class="col-sm-7">{{ batocera_version }}</dd>
+        <dt class="col-sm-5">Box running for</dt>
+        <dd class="col-sm-7">{{ box_uptime }}</dd>
+        <dt class="col-sm-5">Rom Manager installed</dt>
+        <dd class="col-sm-7">{{ installed }}</dd>
+        <dt class="col-sm-5">Rom Manager running since</dt>
+        <dd class="col-sm-7">{{ app_started }} ({{ app_uptime }})</dd>
+        <dt class="col-sm-5">EmulationStation</dt>
+        <dd class="col-sm-7">
+          {% if es_state == "down" %}<span class="badge text-bg-danger">not answering</span>
+          {% elif running %}<span class="badge text-bg-primary">playing</span> <a href="{{ running.url }}">{{ running.name }}</a>
+          {% elif es_state == "busy" %}<span class="badge text-bg-warning">busy</span>
+          {% else %}<span class="badge text-bg-success">idle</span>{% endif %}
+        </dd>
+      </dl>
+    </section>
+    <section class="col-lg-6">
+      <h2 class="h5">Storage</h2>
+      <div class="progress mb-2" role="progressbar" aria-label="Used space on /userdata" aria-valuenow="{{ disk.percent }}" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar{% if disk.percent >= 90 %} bg-danger{% elif disk.percent >= 75 %} bg-warning{% endif %}" style="width: {{ disk.percent }}%">{{ disk.percent }}%</div>
+      </div>
+      <p class="small text-body-secondary mb-0">/userdata: {{ disk.used | size }} used, {{ disk.free | size }} free of {{ disk.total | size }}</p>
+    </section>
+    <section class="col-12">
+      <h2 class="h5">Restart</h2>
+      {% if checking %}<p class="small text-warning-emphasis">A boot check is running: stop it before restarting.</p>{% endif %}
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-danger" type="button" data-restart="es"{% if checking %} disabled{% endif %}
+                data-confirm="Restart EmulationStation? The TV goes black for a few seconds.{% if running %} {{ running.name }} is quit first: unsaved progress is lost.{% endif %}">Restart EmulationStation</button>
+        <button class="btn btn-outline-danger" type="button" data-restart="app"{% if checking %} disabled{% endif %}
+                data-confirm="Restart Rom Manager? This page comes back by itself.{% if downloads_active %} Running and queued downloads are stopped.{% endif %}">Restart Rom Manager</button>
+      </div>
+      <div class="small mt-2" id="restart-status" role="status"></div>
+    </section>
+  </div>
+</main>
+<script>{% include "support/support.js" %}</script>
+{% endblock %}

@@ -186,9 +186,23 @@ function textBlock(text, className) {
   return element;
 }
 
+function timeLeft(seconds) {
+  seconds = Math.ceil(seconds);
+  if (seconds < 60) {
+    return seconds + " s left";
+  }
+  const minutes = Math.floor(seconds / 60);
+  return minutes < 60 ? minutes + " min " + (seconds % 60) + " s left" : Math.floor(minutes / 60) + " h " + (minutes % 60) + " min left";
+}
+
+function rateText(job) {
+  return [job.speed ? humanSize(Math.round(job.speed)) + "/s" : "", job.eta ? timeLeft(job.eta) : ""].filter(Boolean).join(" · ");
+}
+
 function progressCell(job) {
+  const rate = rateText(job);
   if (!job.total) {
-    return cell(job.received ? humanSize(job.received) : "");
+    return cell(job.received ? humanSize(job.received) : "", rate ? textBlock(rate, "small text-body-secondary") : "");
   }
   const percent = Math.min(100, Math.round(job.received / job.total * 100));
   const progress = document.createElement("div");
@@ -200,7 +214,8 @@ function progressCell(job) {
   bar.className = "progress-bar";
   bar.style.width = percent + "%";
   progress.append(bar);
-  return cell(progress, textBlock(humanSize(job.received) + " of " + humanSize(job.total), "small text-body-secondary"));
+  const sizes = humanSize(job.received) + " of " + humanSize(job.total);
+  return cell(progress, textBlock(rate ? sizes + " · " + rate : sizes, "small text-body-secondary"));
 }
 
 function statusCell(job) {

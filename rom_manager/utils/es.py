@@ -103,6 +103,20 @@ class EmulationStation:
             return None
         return game if isinstance(game, dict) and game.get("path") else None
 
+    async def idle(self):
+        try:
+            async with self.session.get(ES_API + "/isIdle", timeout=RUNNING_TIMEOUT) as response:
+                return response.status == 200
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            return None
+
+    async def quit(self):
+        try:
+            async with self.session.get(ES_API + "/quit", timeout=API_TIMEOUT) as response:
+                response.raise_for_status()
+        except (aiohttp.ServerDisconnectedError, asyncio.TimeoutError):
+            pass
+
     async def launch(self, path):
         async with self.session.post(ES_API + "/launch", data=path.encode(), timeout=API_TIMEOUT) as response:
             response.raise_for_status()

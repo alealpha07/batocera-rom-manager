@@ -1,6 +1,9 @@
 import asyncio
+import collections
 import itertools
 import logging
+import os
+import time
 import urllib.parse
 
 import aiohttp
@@ -8,6 +11,8 @@ import aiohttp
 from .roms import CHUNK_SIZE, RomError, check_space, clean_name, destination, save_stream
 
 MAX_KEPT_JOBS = 50
+PARALLEL_DOWNLOADS = 3
+SPEED_WINDOW_SECONDS = 5
 ACTIVE_STATES = ("queued", "downloading")
 DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(sock_connect=20, sock_read=120)
 
@@ -23,14 +28,28 @@ class Job:
         self.id, self.url, self.target, self.overwrite, self.name = job_id, url, target, overwrite, name
         self.status, self.received, self.total = "queued", 0, None
         self.error = self.warning = self.task = None
+        self.samples = collections.deque()
 
     def add_progress(self, size):
         self.received += size
+        now = time.monotonic()
+        self.samples.append((now, self.received))
+        while now - self.samples[0][0] > SPEED_WINDOW_SECONDS:
+            self.samples.popleft()
+
+    def speed(self):
+        if self.status != "downloading" or not self.samples:
+            return None
+        first_time, first_received = self.samples[0]
+        elapsed = time.monotonic() - first_time
+        return (self.received - first_received) / elapsed if elapsed >= 1 else None
 
     def as_dict(self):
+        speed = self.speed()
+        eta = (self.total - self.received) / speed if speed and self.total and self.total > self.received else None
         return {"id": self.id, "url": self.url, "name": self.name, "place": self.target.place,
                 "subfolder": self.target.subfolder, "status": self.status, "received": self.received,
-                "total": self.total, "error": self.error, "warning": self.warning}
+                "total": self.total, "speed": speed, "eta": eta, "error": self.error, "warning": self.warning}
 
 
 def clean_urls(text):
@@ -65,6 +84,7 @@ class DownloadQueue:
         self.pending = asyncio.Queue()
         self.next_id = itertools.count(1)
         self.saved_since_reload = False
+        self.writing = set()
 
     def add(self, urls_text, target, overwrite, name=""):
         urls = clean_urls(urls_text)
@@ -98,17 +118,24 @@ class DownloadQueue:
             del self.jobs[job_id]
 
     async def run(self, app):
-        async with aiohttp.ClientSession(timeout=DOWNLOAD_TIMEOUT) as session:
-            while True:
-                job = await self.pending.get()
-                if job.status == "queued":
-                    await self.run_job(job, session)
-                if self.pending.empty() and self.saved_since_reload:
-                    self.saved_since_reload = False
-                    try:
-                        await app["library"].rescan(app["es"])
-                    except Exception:
-                        logging.exception("ES reload after downloads failed")
+        async with aiohttp.ClientSession(timeout=DOWNLOAD_TIMEOUT) as session, asyncio.TaskGroup() as workers:
+            for _ in range(PARALLEL_DOWNLOADS):
+                workers.create_task(self.work(app, session))
+
+    def active(self):
+        return any(job.status in ACTIVE_STATES for job in self.jobs.values())
+
+    async def work(self, app, session):
+        while True:
+            job = await self.pending.get()
+            if job.status == "queued":
+                await self.run_job(job, session)
+            if self.pending.empty() and not self.active() and self.saved_since_reload:
+                self.saved_since_reload = False
+                try:
+                    await app["library"].rescan(app["es"])
+                except Exception:
+                    logging.exception("ES reload after downloads failed")
 
     async def run_job(self, job, session):
         job.task = asyncio.create_task(self.download(job, session))
@@ -130,8 +157,14 @@ class DownloadQueue:
                 job.name = clean_name(job.name or name_from_response(response, job.url))
                 job.total = response.content_length
                 check_space(folder, job.total)
-                path = destination(folder, job.name, job.overwrite)
-                await save_stream(response.content.iter_chunked(CHUNK_SIZE), path, job.add_progress)
+                path = os.path.realpath(destination(folder, job.name, job.overwrite))
+                if path in self.writing:
+                    raise RomError("%s is already being downloaded" % job.name)
+                self.writing.add(path)
+                try:
+                    await save_stream(response.content.iter_chunked(CHUNK_SIZE), path, job.add_progress)
+                finally:
+                    self.writing.discard(path)
         except asyncio.CancelledError:
             job.status = "cancelled"
             return

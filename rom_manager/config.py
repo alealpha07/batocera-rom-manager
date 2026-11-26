@@ -11,6 +11,9 @@ ROMS_DIR = "/userdata/roms"
 BIOS_DIR = "/userdata/bios"
 BIOS_CHECKER = "/usr/bin/batocera-systems"
 HOTKEYGEN = "/usr/bin/hotkeygen"
+USERDATA_DIR = "/userdata"
+BATOCERA_VERSION_FILE = "/usr/share/batocera/batocera.version"
+SERVICE_NAME = "rom_manager"
 
 
 def load_config():
