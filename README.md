@@ -17,6 +17,7 @@ It runs on the Batocera machine as a service and reads the game list from Emulat
 - Start a game on the TV from its page, and see or quit the running game from the top bar.
 - Boot check: starts a game, a system or the whole library on the TV one game at a time and marks each game green or red, depending on whether it keeps running without emulator errors. Hidden games, ports and apps (Steam, flatpak, config apps, installers) are left out.
 - Support page with the Batocera version, uptime, EmulationStation state and free space, plus buttons to restart EmulationStation or the app.
+- Collections page: turn EmulationStation's automatic and per-genre collections on or off, group them, and create manual collections or dynamic ones filtered by system, genre and players, with a live preview; add a game to collections from its page.
 - Light and dark theme, following the device until you pick one.
 
 ## Requirements

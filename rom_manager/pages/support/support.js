@@ -57,7 +57,7 @@
     await waitFor(kind, false, goneTimeoutMs);
     showStatus("Waiting for it to come back…");
     if (await waitFor(kind, true, backTimeoutMs)) {
-      location.href = "/support?restarted=" + kind;
+      location.href = button.dataset.done || "/support?restarted=" + kind;
     } else {
       showStatus("It didn't come back within two minutes. Reload the page to check again.", true);
     }

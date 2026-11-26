@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+{% block title %}Collections - Batocera Rom Manager{% endblock %}
+{% macro check(name, value, label, enabled, size=none) %}
+<div class="col">
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" form="settings-form" name="{{ name }}" value="{{ value }}" id="{{ name }}-{{ value }}"{% if enabled %} checked{% endif %}>
+    <label class="form-check-label" for="{{ name }}-{{ value }}">{{ label }}{% if size is not none %} <span class="text-body-secondary small">{{ size }}</span>{% endif %}</label>
+  </div>
+</div>
+{% endmacro %}
+{% block body %}
+<main class="container py-3">
+  <h1 class="h4 mb-3">Collections</h1>
+  {% include "flash.html" %}
+  {% include "collections/restart.html" %}
+  {% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+  {% else %}
+  <form id="settings-form" method="post" action="/collections/settings"></form>
+  <section class="mb-4">
+    <h2 class="h5">Your collections</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th class="text-end">Games</th>
+            <th class="text-center">Shown in EmulationStation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for collection in data.own %}
+          <tr>
+            <td><a href="{{ collection.url }}">{{ collection.name }}</a></td>
+            <td>{{ modes[collection.kind] }}</td>
+            <td class="text-end">{{ collection.size if collection.size is not none else "?" }}</td>
+            <td class="text-center">
+              <input class="form-check-input" type="checkbox" form="settings-form" name="custom" value="{{ collection.name }}"{% if collection.enabled %} checked{% endif %} aria-label="Show {{ collection.name }} in EmulationStation">
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-body-secondary py-3">No collections yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <form class="d-flex flex-wrap gap-2 align-items-center" method="post" action="/collections/new" onsubmit="this.querySelector('[type=submit]').disabled = true">
+      <input class="form-control form-control-sm search-box" name="name" required maxlength="60" placeholder="New collection name" aria-label="New collection name" title="Letters, digits, spaces and - [ ] ( )">
+      <select class="form-select form-select-sm w-auto" name="kind" aria-label="Collection type">
+        <option value="manual">Manual: you pick the games</option>
+        <option value="dynamic">Dynamic: games matching filters</option>
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">Create</button>
+    </form>
+  </section>
+  <section class="mb-4">
+    <h2 class="h5">Automatic collections</h2>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
+      {% for item in data.auto %}{{ check("auto", item.key, item.name, item.enabled) }}{% endfor %}
+    </div>
+  </section>
+  <section class="mb-4">
+    <h2 class="h5">Genres</h2>
+    <p class="small text-body-secondary">One collection per genre, with the games EmulationStation puts in it. Empty genres don't show up in EmulationStation.</p>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 mb-3">
+      {% for genre in data.genres %}{{ check("auto", genre.key, genre.name, genre.enabled, genre.size) }}{% endfor %}
+    </div>
+    {% if data.unknown_total %}
+    <div class="alert alert-warning small">
+      {{ data.unknown_total }} games have a genre EmulationStation doesn't recognise, so they are in no genre collection{% if data.no_genre %}, and {{ data.no_genre }} games have no genre{% endif %}.
+      EmulationStation knows genre names in English, French, German, Spanish, Portuguese and Japanese.
+      <details class="mt-2">
+        <summary>Genres not recognised</summary>
+        <ul class="mb-0 mt-1">
+          {% for name, count in data.unknown %}<li>{{ name }} <span class="text-body-secondary">({{ count }})</span></li>{% endfor %}
+          {% if data.more_unknown %}<li class="text-body-secondary">and {{ data.more_unknown }} more</li>{% endif %}
+        </ul>
+      </details>
+    </div>
+    {% elif data.no_genre %}
+    <p class="small text-body-secondary">{{ data.no_genre }} games have no genre.</p>
+    {% endif %}
+  </section>
+  <section class="mb-4">
+    <h2 class="h5">Grouping</h2>
+    <p class="small text-body-secondary mb-2">Put collections under a single "Collections" entry in EmulationStation instead of showing each one next to the systems.</p>
+    {% for value, label in group_modes %}
+    <div class="form-check">
+      <input class="form-check-input" type="radio" form="settings-form" name="group" value="{{ value }}" id="group-{{ value or 'auto' }}"{% if data.group == value %} checked{% endif %}>
+      <label class="form-check-label" for="group-{{ value or 'auto' }}">{{ label }}</label>
+    </div>
+    {% endfor %}
+  </section>
+  <button class="btn btn-primary" type="submit" form="settings-form">Save</button>
+  {% endif %}
+</main>
+{% endblock %}

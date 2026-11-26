@@ -1,0 +1,12 @@
+{% if restarted %}<div class="alert alert-success">EmulationStation restarted with the new collections</div>{% endif %}
+{% if restart_pending %}
+<div class="alert alert-info">
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <span class="me-auto">EmulationStation reads collections when it starts: restart it to see the changes.</span>
+    <button class="btn btn-primary btn-sm" type="button" data-restart="es" data-done="{{ restart_done }}"{% if checking %} disabled title="A boot check is running"{% endif %}
+            data-confirm="Restart EmulationStation? The TV goes black for a few seconds.{% if running %} {{ running.name }} is quit first: unsaved progress is lost.{% endif %}">Restart EmulationStation</button>
+  </div>
+  <div class="small" id="restart-status" role="status"></div>
+</div>
+<script>{% include "support/support.js" %}</script>
+{% endif %}

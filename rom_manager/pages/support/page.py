@@ -9,7 +9,8 @@ from aiohttp import web
 
 from ...config import APP_DIR, BATOCERA_VERSION_FILE, SERVICE_NAME, USERDATA_DIR
 from ...utils.boot_check import ES_ERRORS
-from ...utils.emulator import game_title, quit_game
+from ...utils.collections import CollectionError
+from ...utils.emulator import es_pid, game_title, quit_game
 from ..layout import render
 
 APP_STARTED = time.time()
@@ -82,10 +83,15 @@ async def restart_es(request):
     running = await es.running_game()
     if running and not await quit_game(es):
         return refuse("%s didn't quit, so EmulationStation wasn't restarted" % game_title(running))
+    old_pid = es_pid()
     try:
         await es.quit()
     except ES_ERRORS:
         return refuse("EmulationStation isn't answering")
+    try:
+        await asyncio.to_thread(request.app["collections_restart"].reapply_after_exit, old_pid)
+    except (CollectionError, OSError) as error:
+        return refuse("EmulationStation restarted, but the collection settings weren't saved: %s" % error)
     return web.json_response({"ok": True})
 
 

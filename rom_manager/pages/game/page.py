@@ -5,6 +5,7 @@ import aiohttp
 from aiohttp import web
 
 from ...utils.boot_check import is_game
+from ...utils.collections import MANUAL, CollectionError, create_collection, manual_collections_with, set_membership
 from ...utils.emulator import game_title, quit_game
 from ...utils.library import MEDIA_KINDS, file_list, game_details, game_media, info_changes, info_form
 from ...utils.roms import (IMAGE_TYPES, VIDEO_TYPES, RomError, delete_game, delete_plan, delete_unused_media,
@@ -36,6 +37,13 @@ def managed_files(game):
         return None, 0
 
 
+def game_collections(game):
+    try:
+        return manual_collections_with(game["path"])
+    except OSError:
+        return []
+
+
 async def game(request):
     found = await find_game(request)
     files, more_files = await asyncio.to_thread(file_list, found)
@@ -47,7 +55,34 @@ async def game(request):
                         managed=managed, more_managed=more_managed, versions=versions, media_kinds=MEDIA_KINDS,
                         accept={"image": ",".join(IMAGE_TYPES), "video": ",".join(VIDEO_TYPES)},
                         boot=request.app["boot_check"].result(found["path"]), can_check=is_game(found),
+                        collections=await asyncio.to_thread(game_collections, found),
                         error=request.app["library"].error)
+
+
+def save_collections(path, wanted, new_name):
+    settings = None
+    if new_name:
+        new_name, settings = create_collection(new_name, MANUAL)
+        wanted = wanted | {new_name}
+    return set_membership(path, wanted) or bool(new_name), settings
+
+
+async def edit_collections(request):
+    found = await find_game(request)
+    form = await request.post()
+    response = web.HTTPFound(game_url(found))
+    try:
+        changed, settings = await asyncio.to_thread(save_collections, found["path"], set(form.getall("collection", [])),
+                                                    form.get("new", "").strip())
+    except (CollectionError, OSError) as error:
+        flash(response, "danger", "Collections not saved: %s" % error)
+        raise response
+    if changed:
+        request.app["collections_restart"].remember(settings)
+        flash(response, "success", "Collections saved: restart EmulationStation from the Collections page to see them")
+    else:
+        flash(response, "success", "Nothing changed")
+    raise response
 
 
 async def media(request):

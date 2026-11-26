@@ -10,6 +10,8 @@ from .pages import layout
 from .pages.add import page as add
 from .pages.bios import page as bios
 from .pages.check import check
+from .pages.collection import page as collection
+from .pages.collections import page as collections
 from .pages.game import page as game
 from .pages.games import page as games
 from .pages.login import page as login
@@ -19,6 +21,7 @@ from .pages.support import page as support
 from .pages.transfer import transfer
 from .utils import auth
 from .utils.boot_check import BootCheck
+from .utils.collections import PendingRestart
 from .utils.downloads import DownloadQueue
 from .utils.es import EmulationStation
 from .utils.library import Library
@@ -54,6 +57,7 @@ def create_app():
     app["library"] = Library()
     app["downloads"] = DownloadQueue()
     app["boot_check"] = BootCheck()
+    app["collections_restart"] = PendingRestart()
     app.cleanup_ctx.append(es_session)
     app.cleanup_ctx.append(download_worker)
     app.cleanup_ctx.append(boot_check_task)
@@ -96,4 +100,15 @@ def create_app():
     app.router.add_get("/support/status", support.status)
     app.router.add_post("/support/restart/es", support.restart_es)
     app.router.add_post("/support/restart/app", support.restart_app)
+    app.router.add_post("/game/{system}/{game_id}/collections", game.edit_collections)
+    app.router.add_get("/collections", collections.collections)
+    app.router.add_post("/collections/settings", collections.save_settings)
+    app.router.add_post("/collections/new", collections.create)
+    app.router.add_get("/collections/{name}", collection.collection)
+    app.router.add_get("/collections/{name}/preview", collection.preview)
+    app.router.add_post("/collections/{name}/filters", collection.save_filters)
+    app.router.add_post("/collections/{name}/add", collection.add_game)
+    app.router.add_post("/collections/{name}/remove", collection.remove_game)
+    app.router.add_post("/collections/{name}/rename", collection.rename)
+    app.router.add_post("/collections/{name}/delete", collection.delete)
     return app

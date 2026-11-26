@@ -36,6 +36,10 @@ def processes():
     return found
 
 
+def es_pid():
+    return next((pid for pid, (_, args) in processes().items() if args and args[0] == "emulationstation"), None)
+
+
 def kill_launchers():
     found = processes()
     children = {}
