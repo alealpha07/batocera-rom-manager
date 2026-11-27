@@ -1,71 +1,70 @@
-# batocera-rom-manager
+# Batocera Rom Manager
 
 A web ROM manager for [Batocera](https://batocera.org/), reachable from any device on the home network.
 
 It runs on the Batocera machine as a service and reads the game list from EmulationStation, so it always shows what the TV shows.
 
+![Games list](docs/screenshots/games.png)
+
 ## Features
 
-- Games table with name, system, file and size, sortable by any column.
-- Search by title or file name; option to show games hidden in EmulationStation.
-- Export the games list as shown (system, search and filters) to CSV or TXT.
-- Game page with box art, screenshots, marquee and video, description, metadata, play stats and every file the game uses (tracks of `.cue`/`.gdi`, discs of `.m3u`).
-- Sidebar with every system; systems without games can be shown or hidden.
-- Add ROMs by uploading them from the browser (several files at once, with a progress bar) or by giving download links (one per line, up to three at a time in the background, with speed and time left).
-- Edit a game's info (name, description, genre, developer, publisher, release date, players, rating, region, favorite, hidden), replace or remove its scraped media, or delete it with its files and media.
-- BIOS page: what Batocera's own BIOS check reports as missing or wrong, with a way to upload or download each file to the exact path it needs, plus a browser of the BIOS folder.
+- Games table with name, system, file and size, sortable by any column, with search and an option to show hidden games.
+- Export the games list as shown to CSV or TXT.
+- Game page with scraped media, description, metadata, play stats and every file the game uses (`.cue`/`.gdi` tracks, `.m3u` discs).
+- Edit a game's info, replace or remove its scraped media, or delete it with its files and media.
 - Start a game on the TV from its page, and see or quit the running game from the top bar.
-- Boot check: starts a game, a system or the whole library on the TV one game at a time and marks each game green or red, depending on whether it keeps running without emulator errors. Hidden games, ports and apps (Steam, flatpak, config apps, installers) are left out.
+- Add ROMs by uploading them from the browser or by giving download links, which run in the background with speed and time left.
+- BIOS page: what Batocera's own BIOS check reports as missing or wrong, with upload or download to the exact path, plus a browser of the BIOS folder.
+- Collections: turn EmulationStation's automatic and per-genre collections on or off, group them, and create manual collections or dynamic ones filtered by system, genre and players.
+- Boot check: starts each game of a system or of the whole library on the TV and marks it green or red, depending on whether it keeps running without emulator errors.
 - Support page with the Batocera version, uptime, EmulationStation state and free space, plus buttons to restart EmulationStation or the app.
-- Collections page: turn EmulationStation's automatic and per-genre collections on or off, group them, and create manual collections or dynamic ones filtered by system, genre and players, with a live preview; add a game to collections from its page.
 - Light and dark theme, following the device until you pick one.
+
+| | |
+|---|---|
+| ![Game page](docs/screenshots/game.png) Game page | ![Edit info](docs/screenshots/game-edit.png) Edit info |
+| ![Add ROMs](docs/screenshots/add.png) Add ROMs | ![BIOS](docs/screenshots/bios.png) BIOS |
+| ![Collections](docs/screenshots/collections.png) Collections | ![Dynamic collection](docs/screenshots/collection.png) Dynamic collection |
+| ![Boot check](docs/screenshots/boot-check.png) Boot check | ![Support](docs/screenshots/support.png) Support |
+| ![Dark theme](docs/screenshots/game-dark.png) Dark theme | |
 
 ## Requirements
 
-- Batocera with user services support (`batocera-services`). Tested on Batocera 44.
+Batocera with user services (`batocera-services`). Tested on Batocera 44.
 
 ## Install
 
-Copy the repository to the Batocera machine and run the installer:
+Open a terminal on the Batocera machine (for example `ssh root@batocera.local`, default password `linux`) and run:
 
 ```sh
-bash install.sh
+cd /tmp && curl -sL https://github.com/alealpha07/batocera-rom-manager/archive/refs/heads/main.tar.gz | tar xz \
+  && bash batocera-rom-manager-main/install.sh && rm -rf batocera-rom-manager-main
 ```
 
-The installer copies:
+Run the same command again to update.
 
-- `rom_manager/` to `/userdata/system/rom-manager/`
-- `services/rom_manager` to `/userdata/system/services/`
+Then open `http://<batocera-ip>:18765` in a browser. On the first visit, choose a password: every device will ask for it, and a login lasts 30 days.
 
-It then enables and starts the service. It is safe to run it again to update.
+The service can be turned off and on from EmulationStation: **Main menu > System settings > Services > rom_manager**.
 
-## Usage
+## Good to know
 
-Open `http://<batocera-ip>:18765` in a browser. On the first visit, choose a password: every device will ask for it, and a login lasts 30 days.
-
-The game list is loaded once and kept in memory. Press **Refresh** after adding or scraping games in EmulationStation.
-
-Forgot the password? Delete `/userdata/system/configs/rom-manager/config.json` and restart the service, then choose a new one:
-
-```sh
-batocera-services restart rom_manager
-```
-
-It is made for the home network and uses plain HTTP. To reach it from outside, use a VPN instead of opening the port on your router.
-
-## Enable / disable
-
-From EmulationStation: **Main menu → System settings → Services → `rom_manager`**.
-
-The log is in `/userdata/system/logs/rom-manager.log`.
+- The game list is kept in memory. Press **Refresh** after adding or scraping games in EmulationStation.
+- Forgot the password? Delete `/userdata/system/configs/rom-manager/config.json`, run `batocera-services restart rom_manager` and choose a new one.
+- It is made for the home network and uses plain HTTP. To reach it from outside, use a VPN instead of opening the port on your router.
+- The log is in `/userdata/system/logs/rom-manager.log`.
 
 ## Uninstall
 
 ```sh
-bash uninstall.sh
+bash /userdata/system/rom-manager/uninstall.sh
 ```
 
 This stops and disables the service and removes its files, password and log.
+
+## Development
+
+See [DEV.md](DEV.md).
 
 ## License
 

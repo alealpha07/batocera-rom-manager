@@ -11,6 +11,7 @@ batocera-services stop "$SERVICE_NAME" 2>/dev/null || true
 mkdir -p "$INSTALL_DIR" "$SERVICES_DIR"
 rm -rf "$INSTALL_DIR/rom_manager"
 cp -r "$SOURCE_DIR/rom_manager" "$INSTALL_DIR/rom_manager"
+cp "$SOURCE_DIR/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
 cp "$SOURCE_DIR/services/$SERVICE_NAME" "$SERVICES_DIR/$SERVICE_NAME"
 chmod 755 "$SERVICES_DIR/$SERVICE_NAME"
 
