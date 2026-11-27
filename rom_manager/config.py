@@ -18,8 +18,8 @@ SERVICE_NAME = "rom_manager"
 
 def load_config():
     try:
-        with open(CONFIG_FILE) as fh:
-            return json.load(fh)
+        with open(CONFIG_FILE) as config_file:
+            return json.load(config_file)
     except (OSError, ValueError):
         return {}
 
@@ -27,6 +27,6 @@ def load_config():
 def save_config(config):
     os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
     temp_file = CONFIG_FILE + ".tmp"
-    with open(os.open(temp_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as fh:
-        json.dump(config, fh, indent=2)
+    with open(os.open(temp_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as config_file:
+        json.dump(config, config_file, indent=2)
     os.replace(temp_file, CONFIG_FILE)

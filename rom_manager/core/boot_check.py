@@ -5,10 +5,8 @@ import os
 import re
 import time
 
-import aiohttp
-
 from ..config import HEALTH_FILE
-from .emulator import game_title, quit_game, wait_es_ready
+from .emulationstation import ES_ERRORS
 
 LAUNCH_LOGS = ("/userdata/system/logs/es_launch_stdout.log", "/userdata/system/logs/es_launch_stderr.log")
 DEFAULT_SECONDS, MIN_SECONDS, MAX_SECONDS = 20, 5, 120
@@ -24,10 +22,10 @@ ERROR_WORDS = re.compile(r"\b(error|fatal|fail(ed|ure)?|could ?n[o']t|cannot|can
                          r"crash(ed)?|not an?)\b", re.I)
 NOISE = re.compile(r"\[(libretro )?(INFO|DEBUG)\]|GET_VARIABLE|Not implemented|batocera-launch exception|"
                    r"Failed to connect to Wayland|Qt depends on a UTF-8 locale|QPainter::|^qt\.[\w.]+:|QDBusError|"
-                   r"org\.freedesktop\.|FindFileInDir: not found|which is already loaded|display_rom_load_results|^[\d-]+ [\d:.]+ (INFO|DEBUG)\s", re.I)
+                   r"org\.freedesktop\.|FindFileInDir: not found|which is already loaded|display_rom_load_results|"
+                   r"^[\d-]+ [\d:.]+ (INFO|DEBUG)\s", re.I)
 WARNING = re.compile(r"\bWARN(ING)?\b")
 EXIT_STATUS = re.compile(r"Exiting batocera-launch with status (\d+)")
-ES_ERRORS = (aiohttp.ClientError, asyncio.TimeoutError)
 
 
 class CheckError(Exception):
@@ -36,8 +34,8 @@ class CheckError(Exception):
 
 def load_results():
     try:
-        with open(HEALTH_FILE) as fh:
-            results = json.load(fh)
+        with open(HEALTH_FILE) as results_file:
+            results = json.load(results_file)
     except (OSError, ValueError):
         return {}
     return results if isinstance(results, dict) else {}
@@ -46,8 +44,8 @@ def load_results():
 def save_results(results):
     os.makedirs(os.path.dirname(HEALTH_FILE), exist_ok=True)
     temp_file = HEALTH_FILE + ".tmp"
-    with open(temp_file, "w") as fh:
-        json.dump(results, fh, indent=1)
+    with open(temp_file, "w") as results_file:
+        json.dump(results, results_file, indent=1)
     os.replace(temp_file, HEALTH_FILE)
 
 
@@ -57,24 +55,24 @@ def parse_seconds(value):
     except (TypeError, ValueError):
         raise CheckError("Seconds per game must be a number")
     if not MIN_SECONDS <= seconds <= MAX_SECONDS:
-        raise CheckError("Seconds per game go from %d to %d" % (MIN_SECONDS, MAX_SECONDS))
+        raise CheckError(f"Seconds per game go from {MIN_SECONDS} to {MAX_SECONDS}")
     return seconds
 
 
-def is_game(game):
-    return not (game["hidden"] or game["system"] in UNCHECKED_SYSTEMS or game["path"].lower().endswith(APP_EXTENSIONS))
+def is_checkable(game):
+    return not (game.hidden or game.system in UNCHECKED_SYSTEMS or game.path.lower().endswith(APP_EXTENSIONS))
 
 
 def checkable(games):
-    return [game for game in games if is_game(game)]
+    return [game for game in games if is_checkable(game)]
 
 
-def error_lines(text):
+def error_lines(log_text):
     lines = []
-    for raw in text.splitlines():
-        prefix = LOG_PREFIX.match(raw)
+    for raw_line in log_text.splitlines():
+        prefix = LOG_PREFIX.match(raw_line)
         level, origin = (prefix.group(1), prefix.group(2)) if prefix else ("", "")
-        message = (raw[prefix.end():] if prefix else raw).strip()
+        message = (raw_line[prefix.end():] if prefix else raw_line).strip()
         if not message or NOISE.search(message) or message[:MAX_LINE_LENGTH] in lines:
             continue
         # emulator output is logged at ERROR level line by line, so only its wording tells real errors apart
@@ -86,69 +84,24 @@ def error_lines(text):
 
 
 def launch_log(since):
-    text = ""
+    log_text = ""
     for path in LAUNCH_LOGS:
         try:
             if os.path.getmtime(path) >= since:
-                with open(path, errors="replace") as fh:
-                    text += fh.read() + "\n"
+                with open(path, errors="replace") as log_file:
+                    log_text += log_file.read() + "\n"
         except OSError:
             pass
-    return text
+    return log_text
 
 
-def outcome(passed, reason, lines=()):
+def check_result(passed, reason, lines=()):
     return {"passed": passed, "reason": reason, "lines": list(lines), "date": datetime.date.today().isoformat()}
 
 
-def runs(game):
-    return lambda running: running is not None and running["path"] == game["path"]
-
-
-def stopped(game):
-    return lambda running: running is None or running["path"] != game["path"]
-
-
-async def leave_game(es, game):
-    running = await es.running_game()
-    if running and running["path"] == game["path"] and not await quit_game(es):
-        raise CheckError("Stopped: %s didn't quit" % game["name"])
-    if not running:
-        await wait_es_ready()
-
-
-async def boot_game(es, game, seconds):
-    if not os.path.exists(game["path"]):
-        return outcome(False, "the game file is missing")
-    stats = await es.game(game["system"], game["id"])
-    launched = time.time()
-    try:
-        await es.launch(game["path"])
-        if not await es.wait_until(runs(game), START_WAIT_SECONDS):
-            return outcome(False, "EmulationStation didn't start it", error_lines(launch_log(launched)))
-        started = time.monotonic()
-        if await es.wait_until(stopped(game), seconds):
-            text = launch_log(launched)
-            status = EXIT_STATUS.search(text)
-            return outcome(False, "it closed by itself after %d s%s" % (
-                time.monotonic() - started, " with status %s" % status.group(1) if status else ""), error_lines(text))
-        errors = [line for line in error_lines(launch_log(launched)) if not WARNING.search(line)]
-        return outcome(not errors, "the emulator logged errors" if errors else "it ran for %d s" % seconds, errors)
-    finally:
-        await leave_game(es, game)
-        await restore_stats(es, game, stats)
-
-
-async def restore_stats(es, game, before):
-    after = await es.game(game["system"], game["id"])
-    # ES answers 404 to an update that changes nothing
-    changed = {key: before.get(key, "") for key in STAT_FIELDS if after.get(key, "") != before.get(key, "")}
-    if changed:
-        await es.update_game(game["system"], game["id"], changed)
-
-
 class BootCheck:
-    def __init__(self):
+    def __init__(self, es, library):
+        self.es, self.library = es, library
         self.results = load_results()
         self.task = None
         self.progress = None
@@ -160,6 +113,13 @@ class BootCheck:
     def result(self, path):
         return self.results.get(path)
 
+    def passed(self, game):
+        return (self.results.get(game.path) or {}).get("passed", False)
+
+    def failed(self, game):
+        result = self.results.get(game.path)
+        return result is not None and not result["passed"]
+
     def forget(self, path):
         if self.results.pop(path, None) is not None:
             save_results(self.results)
@@ -167,15 +127,15 @@ class BootCheck:
     def status(self):
         return dict(self.progress or {}, running=self.running)
 
-    def start(self, app, games, seconds, quit_first):
+    def start(self, games, seconds, quit_first):
         if self.running:
             raise CheckError("A boot check is already running")
         if not games:
             raise CheckError("No games to check")
         self.progress = {"total": len(games), "done": 0, "passed": 0, "failed": 0,
-                         "current": "quitting %s" % quit_first if quit_first else games[0]["name"],
+                         "current": f"quitting {quit_first}" if quit_first else games[0].name,
                          "seconds": seconds, "message": "", "last": None}
-        self.task = asyncio.create_task(self.run(app, games, seconds, quit_first))
+        self.task = asyncio.create_task(self.run(games, seconds, quit_first))
 
     def stop(self):
         if self.running and not self.progress["message"]:
@@ -187,23 +147,23 @@ class BootCheck:
             self.task.cancel()
             await asyncio.wait([self.task])
 
-    async def run(self, app, games, seconds, quit_first):
-        es, progress = app["es"], self.progress
+    async def run(self, games, seconds, quit_first):
+        progress = self.progress
         try:
             if quit_first:
-                progress["current"] = "quitting %s" % quit_first
-                if not await quit_game(es):
-                    raise CheckError("Not started: %s didn't quit" % quit_first)
+                progress["current"] = f"quitting {quit_first}"
+                if not await self.es.quit_game():
+                    raise CheckError(f"Not started: {quit_first} didn't quit")
             for game in games:
-                progress["current"] = game["name"]
-                running = await es.running_game()
+                progress["current"] = game.name
+                running = await self.es.running_game()
                 if running:
-                    raise CheckError("Stopped: %s was started on the TV" % game_title(running))
-                result = await boot_game(es, game, seconds)
-                self.results[game["path"]] = result
+                    raise CheckError(f"Stopped: {running.name} was started on the TV")
+                result = await self.boot(game, seconds)
+                self.results[game.path] = result
                 await asyncio.to_thread(save_results, self.results)
                 progress["passed" if result["passed"] else "failed"] += 1
-                progress["last"] = dict(result, name=game["name"])
+                progress["last"] = dict(result, name=game.name)
                 progress["done"] += 1
             progress["message"] = "Done"
         except asyncio.CancelledError:
@@ -214,4 +174,43 @@ class BootCheck:
             progress["message"] = "Stopped: EmulationStation isn't answering"
         finally:
             progress["current"] = ""
-            await app["library"].rescan(es)
+            await self.library.rescan()
+
+    async def boot(self, game, seconds):
+        if not os.path.exists(game.path):
+            return check_result(False, "the game file is missing")
+        stats_before = await self.es.game(game.system, game.id)
+        launched = time.time()
+        try:
+            await self.es.launch(game.path)
+            if not await self.es.wait_until_running(game.path, START_WAIT_SECONDS):
+                return check_result(False, "EmulationStation didn't start it", error_lines(launch_log(launched)))
+            started = time.monotonic()
+            if await self.es.wait_until_stopped(game.path, seconds):
+                log_text = launch_log(launched)
+                status = EXIT_STATUS.search(log_text)
+                reason = f"it closed by itself after {int(time.monotonic() - started)} s"
+                if status:
+                    reason += f" with status {status.group(1)}"
+                return check_result(False, reason, error_lines(log_text))
+            errors = [line for line in error_lines(launch_log(launched)) if not WARNING.search(line)]
+            return check_result(not errors, "the emulator logged errors" if errors else f"it ran for {seconds} s",
+                                errors)
+        finally:
+            await self.leave(game)
+            await self.restore_stats(game, stats_before)
+
+    async def leave(self, game):
+        running = await self.es.running_game()
+        if running and running.path == game.path and not await self.es.quit_game():
+            raise CheckError(f"Stopped: {game.name} didn't quit")
+        if not running:
+            await self.es.wait_until_ready()
+
+    async def restore_stats(self, game, stats_before):
+        stats_after = await self.es.game(game.system, game.id)
+        # ES answers 404 to an update that changes nothing
+        changed = {key: stats_before.get(key, "") for key in STAT_FIELDS
+                   if stats_after.get(key, "") != stats_before.get(key, "")}
+        if changed:
+            await self.es.update_game(game.system, game.id, changed)

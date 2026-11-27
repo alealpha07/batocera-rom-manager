@@ -5,6 +5,8 @@ import time
 
 from aiohttp import web
 
+from ..app_keys import CONFIG
+
 COOKIE_NAME = "rom_manager_session"
 SESSION_SECONDS = 30 * 24 * 3600
 PBKDF2_ITERATIONS = 600_000
@@ -14,7 +16,7 @@ PUBLIC_PATHS = {"/setup", "/login"}
 def hash_password(password):
     salt = os.urandom(16)
     digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERATIONS)
-    return "pbkdf2_sha256$%d$%s$%s" % (PBKDF2_ITERATIONS, salt.hex(), digest.hex())
+    return f"pbkdf2_sha256${PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
 
 
 def check_password(password, stored):
@@ -54,7 +56,7 @@ def end_session(response):
 
 
 def logged_in(request):
-    secret = request.app["config"].get("secret")
+    secret = request.app[CONFIG].get("secret")
     return bool(secret) and valid_session_cookie(request.cookies.get(COOKIE_NAME), secret)
 
 
@@ -62,7 +64,7 @@ def logged_in(request):
 async def login_required(request, handler):
     if request.path in PUBLIC_PATHS or request.path.startswith("/static/"):
         return await handler(request)
-    if not request.app["config"].get("password"):
+    if not request.app[CONFIG].get("password"):
         raise web.HTTPFound("/setup")
     if not logged_in(request):
         raise web.HTTPFound("/login")

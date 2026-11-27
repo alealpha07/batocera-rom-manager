@@ -1,4 +1,4 @@
-{% macro transfer(base, place_label, done_link, done_text, subfolder_label, subfolder_placeholder) %}
+{% macro transfer(base, destination_label, done_link, done_text, subfolder_label, subfolder_placeholder) %}
 <div id="transfer" data-base="{{ base }}" data-done-link="{{ done_link }}" data-done-text="{{ done_text }}">
   <div class="row g-3 mb-4">
     {{ caller() }}
@@ -49,7 +49,7 @@
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0">
       <thead>
-        <tr><th>File</th><th>{{ place_label }}</th><th class="w-25">Progress</th><th>Status</th><th></th></tr>
+        <tr><th>File</th><th>{{ destination_label }}</th><th class="w-25">Progress</th><th>Status</th><th></th></tr>
       </thead>
       <tbody id="jobs">
         <tr><td colspan="5" class="text-center text-body-secondary py-3">No downloads</td></tr>

@@ -1,6 +1,6 @@
 "use strict";
 
-(() => {
+{
   const modal = document.getElementById("check-modal");
   const form = document.getElementById("check-form");
   const setup = document.getElementById("check-setup");
@@ -218,4 +218,4 @@
     view = "setup";
     show();
   });
-})();
+}

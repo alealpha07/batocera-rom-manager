@@ -2,24 +2,29 @@ import asyncio
 
 from aiohttp import web
 
-from ...utils import auth
-from ..layout import render
+from ...app_keys import CONFIG
+from ...core import auth
+from ..layout import redirect, render
+
+routes = web.RouteTableDef()
 
 
+@routes.route("*", "/login")
 async def login(request):
-    config = request.app["config"]
+    config = request.app[CONFIG]
     if not config.get("password"):
-        raise web.HTTPFound("/setup")
+        raise redirect("/setup")
     if request.method != "POST":
-        return await render(request, "login")
+        return await render(request, "login/page.html")
     form = await request.post()
     if await asyncio.to_thread(auth.check_password, form.get("password", ""), config["password"]):
         auth.redirect_with_session(config)
     await asyncio.sleep(1)
-    return await render(request, "login", error="Wrong password")
+    return await render(request, "login/page.html", error="Wrong password")
 
 
+@routes.post("/logout")
 async def logout(request):
-    response = web.HTTPFound("/login")
+    response = redirect("/login")
     auth.end_session(response)
     raise response

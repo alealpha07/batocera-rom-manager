@@ -1,19 +1,20 @@
 {% extends "layout.html" %}
+{% import "components.html" as ui %}
 {% block title %}Support - Batocera Rom Manager{% endblock %}
 {% block body %}
 <main class="container py-3">
   <h1 class="h4 mb-3">Support</h1>
-  {% include "flash.html" %}
+  {{ ui.alerts(flash) }}
   {% if restarted == "es" %}<div class="alert alert-success">EmulationStation restarted</div>{% endif %}
   {% if restarted == "app" %}<div class="alert alert-success">Rom Manager restarted</div>{% endif %}
   <div class="row g-4">
     <section class="col-lg-6">
-      <h2 class="h5">Box</h2>
+      <h2 class="h5">Batocera</h2>
       <dl class="row mb-0">
-        <dt class="col-sm-5">Batocera</dt>
+        <dt class="col-sm-5">Version</dt>
         <dd class="col-sm-7">{{ batocera_version }}</dd>
-        <dt class="col-sm-5">Box running for</dt>
-        <dd class="col-sm-7">{{ box_uptime }}</dd>
+        <dt class="col-sm-5">Running for</dt>
+        <dd class="col-sm-7">{{ uptime }}</dd>
         <dt class="col-sm-5">Rom Manager installed</dt>
         <dd class="col-sm-7">{{ installed }}</dd>
         <dt class="col-sm-5">Rom Manager running since</dt>
@@ -47,5 +48,5 @@
     </section>
   </div>
 </main>
-<script>{% include "support/support.js" %}</script>
+<script>{% include "support/restart.js" %}</script>
 {% endblock %}

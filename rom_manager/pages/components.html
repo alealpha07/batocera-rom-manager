@@ -1,0 +1,41 @@
+{% macro alerts(flash, error=none, error_kind="warning") %}
+{% if error %}<div class="alert alert-{{ error_kind }}">{{ error }}</div>{% endif %}
+{% if flash %}<div class="alert alert-{{ flash.kind }} text-break" role="alert">{{ flash.text }}</div>{% endif %}
+{% endmacro %}
+
+{% macro modal(name, title, action=none, multipart=false, wide=true) %}
+<div class="modal fade" id="{{ name }}-modal" tabindex="-1" aria-labelledby="{{ name }}-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable{% if wide %} modal-lg{% endif %}">
+    {% if action %}<form class="modal-content" method="post" action="{{ action }}"{% if multipart %} enctype="multipart/form-data"{% endif %}>{% else %}<div class="modal-content">{% endif %}
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="{{ name }}-title">{{ title }}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      {{ caller() }}
+    {% if action %}</form>{% else %}</div>{% endif %}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro modal_buttons(submit_label, submit_class="btn-primary", cancel_label="Cancel") %}
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ cancel_label }}</button>
+  {% if submit_label %}<button type="submit" class="btn {{ submit_class }}">{{ submit_label }}</button>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro checkbox(name, value, label, checked, id, form=none, note=none) %}
+<div class="form-check">
+  <input class="form-check-input" type="checkbox" name="{{ name }}" value="{{ value }}" id="{{ id }}"{% if form %} form="{{ form }}"{% endif %}{% if checked %} checked{% endif %}>
+  <label class="form-check-label" for="{{ id }}">{{ label }}{% if note is not none %} <span class="text-body-secondary small">{{ note }}</span>{% endif %}</label>
+</div>
+{% endmacro %}
+
+{% macro breadcrumb(links, current) %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    {% for label, url in links %}<li class="breadcrumb-item"><a href="{{ url }}">{{ label }}</a></li>{% endfor %}
+    <li class="breadcrumb-item active" aria-current="page">{{ current }}</li>
+  </ol>
+</nav>
+{% endmacro %}
