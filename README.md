@@ -24,9 +24,9 @@ It runs on the Batocera machine as a service and reads the game list from Emulat
 |---|---|
 | ![Game page](docs/screenshots/game.png) Game page | ![Edit info](docs/screenshots/game-edit.png) Edit info |
 | ![Add ROMs](docs/screenshots/add.png) Add ROMs | ![BIOS](docs/screenshots/bios.png) BIOS |
-| ![Collections](docs/screenshots/collections.png) Collections | ![Dynamic collection](docs/screenshots/collection.png) Dynamic collection |
-| ![Boot check](docs/screenshots/boot-check.png) Boot check | ![Support](docs/screenshots/support.png) Support |
-| ![Dark theme](docs/screenshots/game-dark.png) Dark theme | |
+| ![BIOS folder](docs/screenshots/bios-files.png) BIOS folder | ![Collections](docs/screenshots/collections.png) Collections |
+| ![Dynamic collection](docs/screenshots/collection.png) Dynamic collection | ![Boot check](docs/screenshots/boot-check.png) Boot check |
+| ![Support](docs/screenshots/support.png) Support | ![Dark theme](docs/screenshots/game-dark.png) Dark theme |
 
 ## Requirements
 
